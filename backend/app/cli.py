@@ -118,15 +118,37 @@ def cmd_export_openapi() -> int:
 
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="app.cli")
-    p.add_argument("command", choices=["check-config", "migrate", "seed", "serve", "reindex", "export-openapi"])
+    p.add_argument("command", choices=["check-config", "migrate", "seed", "serve", "reindex", "export-openapi",
+                                       "sync-init", "sync-once", "sync-status"])
     args = p.parse_args(argv)
     try:
         return {
             "check-config": cmd_check_config, "migrate": cmd_migrate, "seed": cmd_seed, "serve": cmd_serve,
             "reindex": cmd_reindex, "export-openapi": cmd_export_openapi,
+            "sync-init": lambda: cmd_sync("init"), "sync-once": lambda: cmd_sync("once"),
+            "sync-status": lambda: cmd_sync("status"),
         }[args.command]()
     except ConfigError as exc:
         print(f"YAPILANDIRMA HATASI: {exc}", file=sys.stderr)
+        return 2
+
+
+def cmd_sync(action: str) -> int:
+    from app.services.database_sync import SyncError, initialize, read_status, remote_dsn, sync_once
+
+    settings = get_settings()
+    try:
+        if action == "status":
+            result = read_status(settings)
+        else:
+            dsn = remote_dsn(settings)
+            result = (initialize if action == "init" else sync_once)(settings.database_url, dsn)
+        print(json.dumps(result, ensure_ascii=False))
+        return 0 if result.get("status") in ("ok", "initialized") else 1
+    except Exception as exc:
+        # Driver errors can contain passwords and private row content.
+        print(json.dumps({"status": "waiting", "error": str(exc) if isinstance(exc, SyncError)
+                          else type(exc).__name__}), file=sys.stderr)
         return 2
 
 

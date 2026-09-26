@@ -130,6 +130,8 @@ class Settings(BaseSettings):
     supabase_url: str = ""
     supabase_publishable_key: SecretStr = SecretStr("")
     supabase_secret_key: SecretStr = SecretStr("")
+    supabase_database_url: SecretStr = SecretStr("")
+    supabase_sync_interval_seconds: int = Field(default=60, ge=15, le=86400)
 
     # --- testing hooks (never set in production .env) ---
     disable_background_workers: bool = Field(default=False)

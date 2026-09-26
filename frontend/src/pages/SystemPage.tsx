@@ -78,10 +78,12 @@ export default function SystemPage() {
         )}
         {s.supabase && (
           <section className="card">
-            <h2>Supabase (gelecek entegrasyon)</h2>
-            <p>Etkin bayrağı: {String(s.supabase.enabled_flag)} · URL yapılandırıldı: {String(s.supabase.url_configured)}</p>
-            <p>Anahtarlar: yayınlanabilir {String(s.supabase.publishable_key_configured)}, gizli {String(s.supabase.secret_key_configured)} (değerler gösterilmez)</p>
-            <p><strong>Gönderilen veri: {s.supabase.data_sent ? 'VAR' : 'yok'}</strong> · senkronizasyon: uygulanmadı</p>
+            <h2>Supabase senkronizasyonu</h2>
+            <p>Çift yönlü · {s.supabase.enabled_flag ? 'etkin' : 'kapalı'}</p>
+            <p>Veritabanı bağlantısı: {s.supabase.database_url_configured ? 'yapılandırıldı' : 'bekleniyor'}</p>
+            <p>Durum: {({ ok: 'eşitlendi', conflict: 'çakışma var; iki sürüm de korundu', waiting: 'bağlantı veya kurulum bekleniyor', not_initialized: 'kurulum bekleniyor' } as Record<string, string>)[s.supabase.sync?.status] ?? 'bekleniyor'}</p>
+            {s.supabase.sync?.last_success && <p>Son eşitleme: {formatDate(s.supabase.sync.last_success)}</p>}
+            {s.supabase.sync?.conflict_count > 0 && <p className="warn">{s.supabase.sync.conflict_count} kayıt için inceleme gerekiyor. Aktarım durduruldu.</p>}
             <p className="small muted">{s.supabase.note}</p>
           </section>
         )}

@@ -62,6 +62,7 @@ def setup_logging(settings: Settings) -> None:
         settings.anthropic_api_key.get_secret_value(),
         settings.supabase_secret_key.get_secret_value(),
         settings.supabase_publishable_key.get_secret_value(),
+        settings.supabase_database_url.get_secret_value(),
     ]
     flt = RedactingFilter(secrets)
     fmt = logging.Formatter("%(asctime)s %(levelname)s [%(name)s] %(message)s")

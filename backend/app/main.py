@@ -36,6 +36,7 @@ from app.ingestion.watcher import Watcher
 from app.services import audit
 from app.services.audit import Actor
 from app.services.auth import ensure_schema_ready, seed_initial_admin, seed_reference_data
+from app.services.database_sync import SyncWorker
 
 log = logging.getLogger("dayanera")
 
@@ -76,14 +77,17 @@ async def lifespan(app: FastAPI):
     except OperationalError:
         log.error("Veritabanına bağlanılamadı. Docker Desktop'ı ve PostgreSQL konteynerini başlatın.")
     worker = JobWorker(settings)
+    sync_worker = SyncWorker(settings)
     watcher = Watcher(settings, on_new_jobs=worker.wake)
     app.state.worker, app.state.watcher = worker, watcher
     if schema_ok and not settings.disable_background_workers:
+        sync_worker.start()
         worker.start()
         if settings.watcher_enabled:
             watcher.start()
         threading.Thread(target=_warmup_model, daemon=True, name="model-warmup").start()
     yield
+    sync_worker.stop()
     watcher.stop()
     worker.stop()
 

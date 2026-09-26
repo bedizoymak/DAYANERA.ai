@@ -16,18 +16,26 @@ from app.inference.registry import provider_status
 
 
 def supabase_status(settings: Settings) -> dict[str, Any]:
-    """Report configuration presence only. Never returns URL/keys and never
-    contacts Supabase: the beta has no replication, sync, upload or backup."""
+    """Read local sync status only; never return credentials or contact cloud."""
+    from app.services.database_sync import LOCAL_ONLY, TABLES, read_status
+    state = read_status(settings)
     return {
         "enabled_flag": settings.supabase_enabled,
         "url_configured": bool(settings.supabase_url.strip()),
         "publishable_key_configured": bool(settings.supabase_publishable_key.get_secret_value()),
         "secret_key_configured": bool(settings.supabase_secret_key.get_secret_value()),
-        "sync_implemented": False,
-        "network_calls": "none",
-        "data_sent": False,
-        "note": ("Supabase gelecekteki entegrasyon için hazırlandı. Beta sürümde otomatik replikasyon, senkronizasyon, "
-                 "yükleme veya harici yedekleme YOKTUR; yetkili veri kaynağı yerel Docker PostgreSQL'dir."),
+        "database_url_configured": bool(settings.supabase_database_url.get_secret_value()),
+        "sync_implemented": True,
+        "network_calls": "background_sync" if settings.supabase_enabled else "none",
+        "data_sent": bool(state.get("last_success")),
+        "direction": "bidirectional",
+        "interval_seconds": settings.supabase_sync_interval_seconds,
+        "sync": state,
+        "tables": TABLES,
+        "local_only_tables": LOCAL_ONLY,
+        "files_synced": False,
+        "note": ("Çift yönlü veritabanı senkronizasyonu. Çakışmada aktarım durur; iki sürüm korunur. "
+                 "Dosyalar, oturumlar, iş kuyruğu ve denetim günlüğü yerel kalır."),
     }
 
 

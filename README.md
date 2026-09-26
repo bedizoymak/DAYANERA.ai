@@ -10,7 +10,7 @@ grounded in the ISO PDFs in the `iso booklets` folder.
   the reply is exactly **`Bu kaynak setinde doğrulayamadım`**.
 - A deterministic, unit-aware calculation engine computes all numbers. Qwen may only draft a result,
   and the engine validates it. Any mismatch is shown to the user and written to the audit log.
-- Local Docker PostgreSQL is the only authoritative database. Supabase is prepared but disabled, and nothing is synced.
+- Local Docker PostgreSQL serves the application. Optional, explicitly configured two-way Supabase database sync is available; disabled by default. See [setup and scope](docs/SUPABASE_SYNC.md).
 - No online AI provider, cloud embedding or web search is called. The OpenAI and Claude adapters exist but are hard-disabled.
 
 > Hard boundaries are enforced in code: settings refuse non-loopback hosts, a non-local database, a remote Ollama URL
@@ -236,9 +236,8 @@ It never touches `iso booklets`, `.env` or the source code.
 ## Supabase and future providers
 
 - `SUPABASE_ENABLED=false` by default.
-- The owner-only `GET /api/v1/integrations/supabase/status` reports whether values are configured.
-  It never returns them and never contacts Supabase.
-- There is no replication, sync, upload or external backup, and no Supabase client is installed.
+- The owner-only `GET /api/v1/integrations/supabase/status` reports configuration and locally stored sync status. It never returns credentials and never contacts Supabase itself.
+- An optional background worker reconciles 17 application tables in both directions, using the existing Python PostgreSQL driver. See [Supabase sync](docs/SUPABASE_SYNC.md) for initialization, conflict handling, exclusions and limits.
 - `OPENAI_ENABLED` and `ANTHROPIC_ENABLED` must stay `false`. Setting either to `true` stops the app from starting in beta.
 
 ## Performance and limitations (target laptop, CPU only)

@@ -121,7 +121,7 @@ def test_supabase_status_owner_only_and_reveals_no_secrets(admin, member_factory
     r = admin.get("/integrations/supabase/status")
     assert r.status_code == 200
     body = r.json()
-    assert body["data_sent"] is False and body["sync_implemented"] is False and body["network_calls"] == "none"
+    assert body["data_sent"] is False and body["sync_implemented"] is True and body["network_calls"] == "none"
     member = member_factory()
     assert member.get("/integrations/supabase/status").status_code == 403
 

@@ -50,6 +50,7 @@ from app.services.calculations import (
 from app.services.glossary import annotate_first_use
 from app.services.grounding import validate_answer
 from app.services.intent import Intent, classify
+from app.services.inventory import active_corpus_codes, format_inventory, list_active_documents, missing_codes
 from app.services.notes import NotesService
 from app.services.retrieval import Passage, plan_query, search
 from app.services.serialize import message_to_dict
@@ -57,6 +58,30 @@ from app.services.serialize import message_to_dict
 log = logging.getLogger(__name__)
 
 NEW_TITLE = "Yeni sohbet"
+
+# Structured refusal reasons (metadata.refusal.reason). The message content of
+# every refusal remains exactly REFUSAL_PHRASE (master spec §1 rule 3).
+REFUSAL_REASONS = ("no_passages", "low_relevance", "unsupported_numbers", "model_refused", "invalid_citation",
+                   "empty_answer", "unsupported_calculation", "calculation_refused")
+
+
+_PARAPHRASED_REFUSAL = re.compile(
+    r"(\bbilgi\s+(?:yok|bulunmu?yor|bulunmamaktadır|verilmemiş)"
+    r"|(?:pasaj|kaynak)\w*\s+(?:\w+\s+){0,4}?(?:yer\s+alm(?:ıyor|amaktadır)|bulunm(?:uyor|amaktadır)|içerm(?:iyor|emektedir)|yok\b)"
+    r"|yanıtlanamaz|cevaplanamaz|yanıt\s+veremem|cevap\s+veremem|doğrulayamıyorum|doğrulanamıyor|doğrulanamamaktadır"
+    r"|\bnot\s+(?:mentioned|provided|found|contained|specified)\b|\bdoes\s+not\s+contain\b|\bno\s+information\b)",
+    re.IGNORECASE)
+
+
+def looks_like_refusal(answer: str) -> bool:
+    """A model that declines in its own words must still yield the exact refusal phrase."""
+    return bool(_PARAPHRASED_REFUSAL.search(answer))
+
+
+def normalize_refusal_reason(reason: str) -> str:
+    base = (reason or "").split(":", 1)[0]  # e.g. "invalid_citation:[7]" -> "invalid_citation"
+    base = {"unsupported_formula": "unsupported_calculation"}.get(base, base)
+    return base if base in REFUSAL_REASONS else "model_refused"
 
 
 def _now() -> datetime:
@@ -104,6 +129,7 @@ class ChatService:
             "sources_only": self._sources_only,
             "memory_command": self._memory_command,
             "note_command": self._note_command,
+            "corpus_inventory": self._corpus_inventory,
             "calculation": self._calculation,
             "technical": self._technical,
             "general": self._general,
@@ -227,12 +253,44 @@ class ChatService:
                                            metadata={"note_filename": note.filename}, db=db)
         yield {"event": "assistant_message", "data": payload}
 
+    def _corpus_inventory(self, conversation_id, user, user_msg_id, intent: Intent, _atts) -> Iterator[dict]:
+        """List active documents visible to the user. Deterministic, no LLM call (Step 2 Order A)."""
+        t0 = time.perf_counter()
+        with session_scope() as db:
+            scopes = load_scopes(db, user)
+            docs = list_active_documents(db, scopes)
+            text = format_inventory(docs)
+            elapsed = int((time.perf_counter() - t0) * 1000)
+            verified = sum(1 for d in docs if d.verified_corpus)
+            audit.record(db, user.actor, "corpus.inventory", target_type="conversation", target_id=conversation_id,
+                         details={"verified_documents": verified, "other_documents": len(docs) - verified})
+            payload = self._save_assistant(
+                conversation_id, user, user_msg_id, text, "general",
+                metadata={"kind": "corpus_inventory", "document_count": len(docs),
+                          "verified_document_count": verified, "timings_ms": {"inventory": elapsed}},
+                db=db)
+        yield {"event": "assistant_message", "data": payload}
+
     # ------------------------------------------------------------------
-    def _refuse(self, conversation_id, user, user_msg_id, reason: str, details: dict | None = None) -> dict:
-        audit.record_independent(user.actor, "answer.refused", outcome="info", target_type="conversation",
-                                 target_id=conversation_id, details={"reason": reason, **(details or {})})
+    def _refusal_meta(self, user, question: str, reason: str, available_codes: list[str] | None = None) -> dict:
+        """Structured, non-content refusal detail (Step 2 Order B). Content stays REFUSAL_PHRASE."""
+        if available_codes is None:
+            with session_scope() as db:
+                available_codes = active_corpus_codes(db, load_scopes(db, user))
+        requested, missing = missing_codes(question, available_codes)
+        return {"reason": normalize_refusal_reason(reason), "codes_requested": requested, "codes_missing": missing}
+
+    def _refuse(self, conversation_id, user, user_msg_id, reason: str, details: dict | None = None, *,
+                question: str = "", available_codes: list[str] | None = None, event: str = "answer.refused",
+                model: str | None = None, latency_ms: int | None = None) -> dict:
+        refusal = self._refusal_meta(user, question, reason, available_codes)
+        audit.record_independent(user.actor, event, outcome="info", target_type="conversation",
+                                 target_id=conversation_id,
+                                 details={**(details or {}), "reason": refusal["reason"],
+                                          "codes_missing": refusal["codes_missing"]})
         return self._save_assistant(conversation_id, user, user_msg_id, REFUSAL_PHRASE, "unverified",
-                                    metadata={"reason": reason, **(details or {})})
+                                    metadata={**(details or {}), "reason": refusal["reason"], "refusal": refusal},
+                                    model=model, latency_ms=latency_ms)
 
     def _calculation(self, conversation_id, user, user_msg_id, intent: Intent, _atts) -> Iterator[dict]:
         parsed = intent.calc
@@ -250,7 +308,8 @@ class ChatService:
         if not calc_type:
             yield {"event": "assistant_message",
                    "data": self._refuse(conversation_id, user, user_msg_id, "unsupported_formula",
-                                        {"calc_refusal": "Bu hesap türü doğrulanmış kaynaklarla desteklenmiyor."})}
+                                        {"calc_refusal": "Bu hesap türü doğrulanmış kaynaklarla desteklenmiyor."},
+                                        question=intent.question)}
             return
         specs = {s.key: s for s in RULES[calc_type].inputs}
         raw_inputs = {k: v for k, v in raw_inputs.items() if k in specs}
@@ -283,16 +342,20 @@ class ChatService:
                                 "excerpt_end": len(ev["excerpt"]), "document_title": ev["document_title"],
                                 "standard_code": ev["standard_code"], "version_number": ev["version_number"],
                                 "confidence_status": ev["confidence_status"], "cited": True})
+            metadata = {"calculation_id": str(calc.id), "calc_type": calc_type, "calc_status": result.status,
+                        "mismatch": calc.mismatch, "detail_open": intent.wants_detail, "mapping": mapping}
             if result.status == "refused":
+                refusal = self._refusal_meta(user, intent.question, "calculation_refused",
+                                             active_corpus_codes(db, scopes))
+                metadata.update(reason=refusal["reason"], refusal=refusal)
                 audit.record(db, user.actor, "answer.refused", outcome="info", target_type="calculation",
-                             target_id=calc.id, details={"reason": "calculation_refused"})
+                             target_id=calc.id, details={"reason": refusal["reason"],
+                                                         "codes_missing": refusal["codes_missing"]})
             payload = self._save_assistant(
                 conversation_id, user, user_msg_id, content, mode,
                 show_sources=intent.wants_sources and result.status == "ok",
                 sources=sources if result.status == "ok" else [],
-                metadata={"calculation_id": str(calc.id), "calc_type": calc_type, "calc_status": result.status,
-                          "mismatch": calc.mismatch, "detail_open": intent.wants_detail, "mapping": mapping},
-                db=db)
+                metadata=metadata, db=db)
             calc.message_id = uuid.UUID(payload["id"])
             if result.status == "ok" and sources:
                 audit.record(db, user.actor, "source.used", target_type="calculation", target_id=calc.id,
@@ -309,18 +372,52 @@ class ChatService:
 
     def _technical(self, conversation_id, user, user_msg_id, intent: Intent, _atts) -> Iterator[dict]:
         yield {"event": "status", "data": {"stage": "retrieval", "text": "Doğrulanmış ISO kaynakları aranıyor…"}}
+        t_start = time.perf_counter()
+        timings: dict[str, int] = {}
+
+        def ms(t0: float) -> int:
+            return int((time.perf_counter() - t0) * 1000)
+
         prev_q = self._previous_user_question(conversation_id, user_msg_id)
         with session_scope() as db:
             scopes = load_scopes(db, user)
+            available = active_corpus_codes(db, scopes)
+        # Order C.1: every ISO code the question names is absent -> refuse now (no retrieval, no LLM)
+        requested, missing = missing_codes(intent.question, available)
+        if requested and len(missing) == len(requested):
+            timings.update(retrieval=0, total=ms(t_start))
+            yield {"event": "assistant_message",
+                   "data": self._refuse(conversation_id, user, user_msg_id, "no_passages",
+                                        {"short_circuit": "codes_missing", "timings_ms": timings},
+                                        question=intent.question, available_codes=available)}
+            return
+        t0 = time.perf_counter()
+        min_cov = self.settings.retrieval_min_coverage
+        with session_scope() as db:
+            scopes = load_scopes(db, user)
             plan = plan_query(intent.question)
-            passages = search(db, scopes, plan, top_k=self.settings.retrieval_top_k)
+            passages = search(db, scopes, plan, top_k=self.settings.retrieval_top_k, min_coverage=min_cov)
             if not passages and prev_q:
                 plan = plan_query(intent.question, context=prev_q)
-                passages = search(db, scopes, plan, top_k=self.settings.retrieval_top_k)
-        plan_info = {"concepts": plan.concepts, "codes": plan.codes}
+                passages = search(db, scopes, plan, top_k=self.settings.retrieval_top_k, min_coverage=min_cov)
+        timings["retrieval"] = ms(t0)
+        plan_info = {"concepts": plan.concepts, "codes": plan.codes, "literals": plan.literals}
         if not passages:
+            timings["total"] = ms(t_start)
             yield {"event": "assistant_message",
-                   "data": self._refuse(conversation_id, user, user_msg_id, "no_passages", {"plan": plan_info})}
+                   "data": self._refuse(conversation_id, user, user_msg_id, "no_passages",
+                                        {"plan": plan_info, "timings_ms": timings},
+                                        question=intent.question, available_codes=available)}
+            return
+        # Order C.2: relevance gate on the absolute passage score, before any generation
+        best = max(p.score for p in passages)
+        if best < self.settings.retrieval_min_score:
+            timings["total"] = ms(t_start)
+            yield {"event": "assistant_message",
+                   "data": self._refuse(conversation_id, user, user_msg_id, "low_relevance",
+                                        {"plan": plan_info, "best_score": best,
+                                         "min_score": self.settings.retrieval_min_score, "timings_ms": timings},
+                                        question=intent.question, available_codes=available)}
             return
         # focused excerpts around the matched concepts keep the CPU prompt small
         budget = self.settings.retrieval_max_context_chars
@@ -335,27 +432,33 @@ class ChatService:
         yield {"event": "status", "data": {"stage": "generation", "text": "Yerel model kaynaklara dayalı yanıt hazırlıyor…"}}
         pdicts = [{"standard_code": p.standard_code, "title": p.document_title, "locator": p.locator, "text": p.text}
                   for p in used]
+        t0 = time.perf_counter()
         try:
             res = self.provider.chat(
                 _msgs(verified_messages(intent.question, pdicts, intent.wants_detail,
                                         prev_q if prev_q and len(intent.question) < 60 else None)),
-                GenerationOptions(temperature=0.1, num_predict=900 if intent.wants_detail else 350))
+                # Order C.3: short answers are capped at 250 tokens (detail mode keeps 900)
+                GenerationOptions(temperature=0.1, num_predict=900 if intent.wants_detail else 250))
         except ProviderError as exc:
             yield {"event": "assistant_message", "data": self._error(conversation_id, user, user_msg_id, exc)}
             return
+        timings["generation"] = ms(t0)
         yield {"event": "status", "data": {"stage": "validation", "text": "Yanıt kaynak pasajlarına göre doğrulanıyor…"}}
+        t0 = time.perf_counter()
         extra = [f"{p.standard_code or ''} {p.document_title} {p.locator}" for p in used]
         g = validate_answer(res.content, [p.text for p in used], intent.question, extra_allowed=extra)
+        if g.accepted and looks_like_refusal(g.text):
+            g.accepted, g.text, g.reason = False, REFUSAL_PHRASE, "model_refused"
+        timings["validation"] = ms(t0)
+        timings["total"] = ms(t_start)
         retrieved_meta = [{"chunk_id": str(p.chunk_id), "document_id": str(p.document_id), "version_id": str(p.version_id),
                            "page": p.page_number, "score": p.score} for p in used]
         if not g.accepted:
-            audit.record_independent(user.actor, "answer.grounding_failed", outcome="info", target_type="conversation",
-                                     target_id=conversation_id,
-                                     details={"reason": g.reason, "unsupported_numbers": g.unsupported_numbers})
-            payload = self._save_assistant(conversation_id, user, user_msg_id, REFUSAL_PHRASE, "unverified",
-                                           metadata={"reason": g.reason, "retrieved": retrieved_meta, "plan": plan_info,
-                                                     "unsupported_numbers": g.unsupported_numbers},
-                                           model=res.model, latency_ms=res.latency_ms)
+            payload = self._refuse(conversation_id, user, user_msg_id, g.reason or "model_refused",
+                                   {"retrieved": retrieved_meta, "plan": plan_info,
+                                    "unsupported_numbers": g.unsupported_numbers, "timings_ms": timings},
+                                   question=intent.question, available_codes=available,
+                                   event="answer.grounding_failed", model=res.model, latency_ms=res.latency_ms)
             yield {"event": "assistant_message", "data": payload}
             return
         g.text = annotate_first_use(g.text)  # English term on first use of specialist terms
@@ -370,7 +473,7 @@ class ChatService:
             payload = self._save_assistant(conversation_id, user, user_msg_id, g.text, "verified_source",
                                            show_sources=intent.wants_sources, sources=sources,
                                            metadata={"retrieved": retrieved_meta, "plan": plan_info,
-                                                     "detail_open": intent.wants_detail},
+                                                     "detail_open": intent.wants_detail, "timings_ms": timings},
                                            model=res.model, latency_ms=res.latency_ms, db=db)
             audit.record(db, user.actor, "source.used", target_type="message", target_id=payload["id"],
                          details={"sources": [{"doc": str(s["document_id"]), "version": str(s["version_id"]),

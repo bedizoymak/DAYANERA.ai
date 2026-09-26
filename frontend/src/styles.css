@@ -191,3 +191,4 @@ input, select, textarea { border: 1px solid var(--border); border-radius: 7px; p
   .sidebar { display: none; }
   .split { grid-template-columns: 1fr; }
 }
+.refusal-hint { margin: 6px 0 0; font-style: italic; }

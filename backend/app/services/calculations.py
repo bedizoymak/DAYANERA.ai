@@ -149,6 +149,8 @@ def llm_draft(provider: LLMProvider, calc_type: str, inputs: dict[str, InputValu
         "gear_pair": ["u", "d1", "d2", "alpha_t", "alpha_wt"],
         "iso1328_flank_tolerance": ["f_pT", "F_pT", "f_HaT", "f_faT", "F_aT", "f_HbT", "f_fbT", "F_bT"],
         "iso286_it_tolerance": ["IT"],
+        "iso286_hole_H": ["IT", "EI", "ES", "lower_size", "upper_size"],
+        "iso286_shaft_h": ["IT", "es", "ei", "lower_size", "upper_size"],
     }[calc_type]
     res = provider.chat([_m(x) for x in calc_draft_messages(rule.title, in_desc, [{"key": k} for k in outputs])],
                         GenerationOptions(temperature=0.0, json_mode=True, num_predict=400))

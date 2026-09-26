@@ -151,7 +151,27 @@ GLOSSARY: dict[str, list[str]] = {
     "açı": ["angle"],
     "boşluk": ["backlash", "clearance"],
     "mastar": ["gauge"],
-    "tanım": ["definition"],
+    # general mechanical terms (Step 2): questions about them are technical and must be
+    # verified or refused, never answered from the model's own knowledge
+    "cıvata": ["bolt"],
+    "civata": ["bolt"],
+    "somun": ["nut"],
+    "vida": ["screw"],
+    "çekme dayanımı": ["tensile strength"],
+    "akma dayanımı": ["yield strength"],
+    "dayanım": ["strength"],
+    "sıkma torku": ["tightening torque"],
+    "mukavemet sınıfı": ["property class"],
+    "conta": ["gasket", "seal"],
+    "sızdırmazlık": ["sealing"],
+    "kayış": ["belt"],
+    "kasnak": ["pulley"],
+    "kaynak dikişi": ["weld"],
+    "elektrot": ["electrode"],
+    "elektrod": ["electrode"],  # consonant mutation: elektrodu, elektrodun
+    "paslanmaz çelik": ["stainless steel"],
+    "çelik": ["steel"],
+    "hidrolik": ["hydraulic"],
     "sembol": ["symbol"],
     "tablo": ["table"],
     "formül": ["formula", "equation"],
@@ -161,7 +181,8 @@ GLOSSARY: dict[str, list[str]] = {
 }
 
 TECH_EXTRA_TERMS = [
-    "iso", "din", "standart", "tolerans", "dişli", "modül", "gear", "module", "tolerance", "hob", "azdırma",
+    # Step 2 Order D: bare "iso", "din", "standart", "standard" are NOT technical on their own
+    "tolerans", "dişli", "modül", "gear", "module", "tolerance", "hob", "azdırma",
     "helis", "helix", "profil", "profile", "mm", "µm", "mikron", "evolvent", "involute", "kremayer", "rack",
     "pinyon", "pinion", "taşlama", "grinding", "ölçüm", "muayene", "inspection", "gps", "it0", "it1", "it2",
     "it3", "it4", "it5", "it6", "it7", "it8", "it9", "it10", "it11", "it12", "geçme", "fit", "sapma", "deviation",
@@ -203,19 +224,63 @@ def _stem_regex(phrase: str) -> re.Pattern:
 _GLOSSARY_RE = sorted(((k, _stem_regex(k), v) for k, v in GLOSSARY.items()), key=lambda t: -len(t[0]))
 
 
-def map_turkish_terms(text: str) -> list[tuple[str, list[str]]]:
-    """Return matched (turkish_phrase, english_phrases), longest phrases first, non-overlapping."""
+def map_turkish_spans(text: str) -> tuple[list[tuple[str, list[str]]], list[tuple[int, int]]]:
+    """Glossary matches: (concepts once per phrase, every matched character span).
+
+    Longest phrases win; spans never overlap. Spans index into ``text`` (tr_lower
+    keeps the length for Turkish text).
+    """
     low = tr_lower(text)
     taken: list[tuple[int, int]] = []
     out = []
     for key, rx, en in _GLOSSARY_RE:
+        hit = False
         for m in rx.finditer(low):
             if any(not (m.end() <= s or m.start() >= e) for s, e in taken):
                 continue
             taken.append((m.start(), m.end()))
+            hit = True
+        if hit:
             out.append((key, en))
-            break
-    return out
+    return out, taken
+
+
+def map_turkish_terms(text: str) -> list[tuple[str, list[str]]]:
+    """Return matched (turkish_phrase, english_phrases), longest phrases first, non-overlapping."""
+    return map_turkish_spans(text)[0]
+
+
+# Function words, question words and generic verbs that carry no retrieval
+# meaning. They are ignored when measuring how much of a question a passage
+# supports (Step 2 Order C relevance gate).
+QUESTION_WORDS = {
+    "nasıl", "nasil", "neden", "niçin", "niye", "nerede", "hangisi", "hangileri", "kaçtır", "kactir", "nedir",
+    "nelerdir", "midir", "mıdır", "mudur", "müdür", "acaba", "peki", "şimdi", "simdi", "ayrıca", "yani",
+    "hesaplanır", "hesaplanir", "hesapla", "hesaplar", "hesaplanmalı", "hesaplayabilir", "hesabı", "hesap",
+    "verilir", "verilmiştir", "verilmiş", "tanımlanır", "tanımlanmıştır", "belirlenir", "belirtilir", "kullanılır",
+    "yapılır", "yapılmalı", "olmalı", "olmalıdır", "olur", "olabilir", "gerekir", "gerekli", "önerilir",
+    "önerilen", "istenir", "bulunur", "alınır", "seçilir", "ifade", "edilir", "eder", "denir", "tane", "tanedir",
+    "arasında", "arasındaki", "fark", "farkı", "ilgili", "kısaca", "kısa", "detaylı", "ayrıntılı", "açıklar",
+    "açıklayın", "anlatır", "söyler", "listeler", "listele", "söyleyin", "bilgi", "hakkında", "biraz", "tam",
+    "ya", "ye", "yı", "yi", "yu", "yü", "na", "ne", "nı", "ni", "nu", "nü", "da", "de", "ta", "te", "dan", "den",
+    "tan", "ten", "ın", "in", "un", "ün", "nın", "nin", "nun", "nün", "la", "le", "ki", "si", "sı", "su", "sü",
+    "e", "a", "ı", "i", "u", "ü", "mı", "mi", "mu", "mü", "mısın", "misin", "musun", "müsün", "bana", "benim",
+    "sen", "siz", "bize", "bir", "iki", "her", "tüm", "bütün", "şey", "gibi", "kadar", "ise", "iken", "olan",
+    "olarak", "göre", "için", "icin", "ile", "ve", "veya", "yahut", "ama", "fakat", "standart", "standardı",
+    "standartta", "standardında", "standarda", "standardına", "standartlarda", "standartlar", "iso", "din",
+    "kaynak", "kaynağı", "kaynakları", "ver", "verir", "değeri", "değerleri", "değer", "degeri",
+    "please", "what", "which", "how", "is", "are", "the", "an", "of", "for", "and", "or", "on", "to",
+    "with", "by", "be", "does", "do", "according", "value", "values", "give", "tell", "me",
+    "tanım", "tanımı", "tanımla", "ilişki", "ilişkisi", "sonra", "sonrası", "önce", "öncesi",
+    "durum", "durumu", "durumunda", "nedeniyle", "türleri", "çeşitleri",
+}
+
+# Scoring-only aliases for generic Turkish words (Order C relevance gate). They are
+# deliberately NOT glossary entries so that they never make a message "technical".
+SCORING_ALIASES: dict[str, list[str]] = {
+    "sınıf": ["class", "grade"], "tür": ["type"], "çeşit": ["type", "kind"], "hız": ["speed", "velocity"],
+    "kesme": ["cutting"], "kuvvet": ["force"], "değişken": ["variable"], "birim": ["unit"],
+}
 
 
 def ascii_lower(s: str) -> str:
@@ -267,15 +332,27 @@ def annotate_first_use(text: str, max_terms: int = 8) -> str:
 
 _GENERIC_EN = {"of", "and", "the", "number", "total", "form", "table", "class", "fit", "definition", "symbol", "scope",
                "range", "application", "reference", "control", "checking", "datum", "equation", "formula", "power",
-               "life", "speed", "moment", "height", "oil", "noise", "surface", "material", "test", "factor"}
+               "life", "speed", "moment", "height", "oil", "noise", "surface", "material", "test", "factor",
+               "standard", "standards", "iso", "din"}
 ENGLISH_TECH_WORDS = {w for alts in GLOSSARY.values() for p in alts for w in p.split()} - _GENERIC_EN
 
 
+_NUMBER_WITH_UNIT = re.compile(
+    r"\d+(?:[.,]\d+)?\s*(?:mm|µm|μm|um|cm|nm|n·m|kn|mpa|gpa|°|derece|rpm|kw)(?![a-zçğıöşü])", re.IGNORECASE)
+_METRIC_THREAD = re.compile(r"\bm\d{1,2}(?:\s*[x×]\s*\d+(?:[.,]\d+)?)?\b")  # M10, M12x1,5
+_BARE_STANDARD_WORDS = {"iso", "din", "standart", "standard", "standards", "standartlar", "standartları"}
+
+
 def has_technical_terms(text: str) -> bool:
+    """Technical if the text has a mapped Turkish term, a gear/tolerance term, an ISO code,
+    an IT grade or a number with a unit. Bare "iso"/"din"/"standart"/"standard" alone never
+    qualify (Step 2 Order D)."""
     if map_turkish_terms(text):
         return True
     low = ascii_lower(text)
     if re.search(r"\biso\s?(?:/tr\s?)?\d{2,5}", low) or re.search(r"\bit\s?\d{1,2}\b", low):
         return True
+    if _NUMBER_WITH_UNIT.search(low) or _METRIC_THREAD.search(low):
+        return True
     words = set(re.findall(r"[\wµ]+", low)) | set(re.findall(r"[\wµ]+", tr_lower(text)))
-    return bool(words & (set(TECH_EXTRA_TERMS) | ENGLISH_TECH_WORDS))
+    return bool((words - _BARE_STANDARD_WORDS) & (set(TECH_EXTRA_TERMS) | ENGLISH_TECH_WORDS))

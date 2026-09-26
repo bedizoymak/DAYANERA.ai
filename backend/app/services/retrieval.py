@@ -15,7 +15,16 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.services.access import ScopeSet
-from app.services.glossary import TURKISH_STOPWORDS, ascii_lower, map_turkish_terms
+from app.services.glossary import (
+    QUESTION_WORDS,
+    SCORING_ALIASES,
+    TURKISH_STOPWORDS,
+    ascii_lower,
+    map_turkish_spans,
+    map_turkish_terms,
+    tr_lower,
+)
+from app.services.grounding import numbers_in
 
 
 @dataclass
@@ -31,8 +40,8 @@ class Passage:
     text: str
     confidence_status: str
     rank: float
-    coverage: float = 0.0
-    score: float = 0.0
+    coverage: float = 0.0  # fraction of glossary/English concepts matched (relative filter)
+    score: float = 0.0  # absolute relevance in [0, 1]: fraction of the question's significant terms supported
     matched: list[str] = field(default_factory=list)
     excerpt_start: int = 0  # offsets of the focused excerpt within the chunk text
     excerpt_end: int = 0
@@ -50,6 +59,9 @@ class QueryPlan:
     raw_terms: list[str]
     tsquery_en: str
     tsquery_simple: str
+    # significant question tokens NOT covered by a concept (e.g. "civata", "8.8", "m10", "h7");
+    # a passage must literally contain them to count as supporting them
+    literals: list[str] = field(default_factory=list)
 
     @property
     def empty(self) -> bool:
@@ -66,10 +78,33 @@ def _ts_phrase(phrase: str) -> str | None:
     return " <-> ".join(words) if len(words) > 1 else words[0]
 
 
+_TOKEN = re.compile(r"[^\W_]+(?:[.,]\d+)?", re.UNICODE)  # words, codes like m10/h7 and decimals like 8.8
+_CODE_SPAN = re.compile(r"\biso\s?(?:/\s?tr\s?)?\d{2,5}(?:-\d{1,2})?(?::\d{4})?", re.IGNORECASE)
+
+
+def literal_terms(question: str, mapped_spans: list[tuple[int, int]], concept_words: set[str]) -> list[str]:
+    """Significant tokens of the question that no glossary concept covers."""
+    blocked = list(mapped_spans) + [m.span() for m in _CODE_SPAN.finditer(question)]
+    low = tr_lower(question)
+    out: list[str] = []
+    for m in _TOKEN.finditer(low):
+        if any(not (m.end() <= s or m.start() >= e) for s, e in blocked):
+            continue
+        tok = m.group(0).replace(",", ".")
+        if len(tok) < 2 and not tok.isdigit():
+            continue
+        if tok in QUESTION_WORDS or tok in TURKISH_STOPWORDS or tok in concept_words:
+            continue
+        if tok not in out:
+            out.append(tok)
+    return out
+
+
 def plan_query(question: str, context: str | None = None) -> QueryPlan:
     text_all = question if not context else f"{question}\n{context}"
     concepts: list[list[str]] = []
-    for _tr, en in map_turkish_terms(question):
+    mapped, mapped_spans = map_turkish_spans(question)
+    for _tr, en in mapped:
         concepts.append(en)
     codes = [m.group(1) for m in re.finditer(r"\biso\s?(?:/tr\s?)?(\d{2,5}(?:-\d{1,2})?)", ascii_lower(text_all))]
     low = ascii_lower(question)
@@ -103,9 +138,11 @@ def plan_query(question: str, context: str | None = None) -> QueryPlan:
     simple_parts = [w for w in simple_parts if w]
     for c in codes:
         simple_parts.append(c.split("-")[0])
+    concept_words = {w for c in concepts for p in c for w in p.lower().split()}
     return QueryPlan(concepts=concepts, codes=codes, raw_terms=raw_terms,
                      tsquery_en=" | ".join(dict.fromkeys(en_parts)),
-                     tsquery_simple=" | ".join(dict.fromkeys(simple_parts)))
+                     tsquery_simple=" | ".join(dict.fromkeys(simple_parts)),
+                     literals=literal_terms(question, mapped_spans, concept_words))
 
 
 def _concept_regex(alt: str) -> re.Pattern:
@@ -177,7 +214,28 @@ LIMIT 60
 """
 
 
-def search(db: Session, scopes: ScopeSet, plan: QueryPlan, *, top_k: int = 5) -> list[Passage]:
+def term_coverage(plan: QueryPlan, passage_text: str, matched_concepts: int) -> float:
+    """Absolute relevance: share of the question's significant terms the passage supports."""
+    total = len(plan.concepts) + len(plan.literals)
+    if total == 0:
+        return 1.0
+    numbers = numbers_in(passage_text)
+    hits = matched_concepts
+    for tok in plan.literals:
+        if re.fullmatch(r"\d+(?:\.\d+)?", tok):
+            canon = (tok.rstrip("0").rstrip(".") if "." in tok else tok).lstrip("0") or "0"
+            hits += canon in numbers
+        elif re.search(r"(?<!\w)" + re.escape(tok), passage_text, re.IGNORECASE):
+            hits += 1
+        else:
+            aliases = next((v for stem, v in SCORING_ALIASES.items() if tok.startswith(stem)), [])
+            if any(re.search(rf"\b{re.escape(a)}", passage_text, re.IGNORECASE) for a in aliases):
+                hits += 1
+    return hits / total
+
+
+def search(db: Session, scopes: ScopeSet, plan: QueryPlan, *, top_k: int = 5,
+           min_coverage: float = 0.5) -> list[Passage]:
     if plan.empty:
         return []
     exprs, params = [], {}
@@ -196,24 +254,25 @@ def search(db: Session, scopes: ScopeSet, plan: QueryPlan, *, top_k: int = 5) ->
     if not rows:
         return []
     max_rank = max(r.rank for r in rows) or 1.0
-    passages: list[Passage] = []
+    passages: list[tuple[float, Passage]] = []
     for r in rows:
         cov, matched = _coverage(plan, r.text)
         p = Passage(chunk_id=r.id, document_id=r.document_id, version_id=r.version_id, version_number=r.version_number,
                     document_title=r.title, standard_code=r.standard_code, page_number=r.page_number,
                     locator=r.locator, text=r.text, confidence_status=r.confidence_status, rank=float(r.rank),
                     coverage=cov, matched=matched)
-        p.score = round(0.65 * cov + 0.35 * (float(r.rank) / max_rank), 4)
+        p.score = round(term_coverage(plan, r.text, len(matched)), 4)
+        order = p.score + 0.15 * (float(r.rank) / max_rank)
         if plan.codes and p.standard_code and any(re.search(rf"\b{re.escape(c)}(\b|:)", p.standard_code) for c in plan.codes):
-            p.score += 0.25
-        passages.append(p)
+            order += 0.25
+        passages.append((order, p))
     n = len(plan.concepts)
-    min_cov = 1.0 if n <= 1 else 0.5
-    kept = [p for p in passages if p.coverage >= min_cov - 1e-9]
+    min_cov = 1.0 if n <= 1 else min_coverage
+    kept = [(o, p) for o, p in passages if p.coverage >= min_cov - 1e-9]
     if plan.codes:
         # The user named specific standard(s): only passages of those standards may
         # answer. If none of them is in the active corpus, nothing can be verified.
-        kept = [p for p in kept if p.standard_code and any(re.search(rf"\b{re.escape(c)}(\b|:)", p.standard_code)
-                                                           for c in plan.codes)]
-    kept.sort(key=lambda p: p.score, reverse=True)
-    return kept[:top_k]
+        kept = [(o, p) for o, p in kept if p.standard_code and any(
+            re.search(rf"\b{re.escape(c)}(\b|:)", p.standard_code) for c in plan.codes)]
+    kept.sort(key=lambda t: t[0], reverse=True)
+    return [p for _o, p in kept[:top_k]]

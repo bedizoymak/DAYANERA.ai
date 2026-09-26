@@ -4,7 +4,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-from app.calc.parse import ParsedCalc, parse_calculation
+from app.calc.parse import TABLE_LOOKUPS, ParsedCalc, parse_calculation
 from app.services.glossary import has_technical_terms, tr_lower
 from app.services.memory import parse_memory_command
 
@@ -22,10 +22,47 @@ _FILLER = {"lütfen", "lutfen", "bana", "şimdi", "simdi", "da", "de", "bir", "�
            "yanıtın", "yanitin", "bunun", "için", "icin", "misin", "mısın", "please", "the", "for", "that", "bu", "şu",
            "cevap", "yanıt", "ve"}
 
+# --- corpus inventory ("which standards do you have?") -------------------
+_DOC = r"(?:iso\s+)?(?:standart|standard|norm|kaynak|doküman|döküman|dokuman|belge)\w*"
+_DOC_NO_SOURCE = r"(?:iso\s+)?(?:standart|standard|norm|doküman|döküman|dokuman|belge)\w*"
+INVENTORY_PATTERNS = [
+    re.compile(p, re.UNICODE) for p in (
+        rf"\bhangi\s+{_DOC}\s+(?:var|yüklü|mevcut|bulunuyor|bulunur|kayıtlı|elinde|sende|sistemde|biliyorsun|tanıyorsun)",
+        rf"\belinde(?:ki)?\s+(?:hangi\s+|ne\s+|neler\s+)?{_DOC}",
+        rf"\b(?:sende|sistemde|korpusta|korpusunda)\s+(?:hangi|ne|neler)\s+{_DOC}",
+        r"\bneleri\s+biliyorsun",
+        r"\bkaynak\s+set\w*\s+(?:ne|neler|hangi)\w*",
+        rf"\b{_DOC_NO_SOURCE}\s+listele\w*",
+        rf"\blistele\w*\s+{_DOC_NO_SOURCE}",
+        rf"\byüklü\s+(?:olan\s+)?{_DOC_NO_SOURCE}",
+        rf"\b{_DOC_NO_SOURCE}\s+(?:neler|nelerdir)\b",
+        r"\bwhich\s+(?:iso\s+)?(?:standards|documents|norms|sources)\s+(?:do\s+you\s+have|are\s+(?:loaded|available|indexed))",
+        r"\blist\s+(?:the\s+|all\s+|your\s+)?(?:iso\s+)?(?:standards|documents|sources)\b",
+        r"\bwhat\s+(?:iso\s+)?(?:standards|documents)\s+(?:do\s+you\s+have|are\s+(?:loaded|available))",
+    )
+]
+_ISO_CODE = re.compile(r"\biso\s*(?:/\s*tr\s*)?\d")
+
+
+def is_inventory_question(text: str) -> bool:
+    """True for questions about which documents/standards are loaded.
+
+    Never true when a concrete technical question is present: the message must
+    not contain an ISO code or any digit outside the matched inventory phrase.
+    """
+    low = tr_lower(text).replace("ıso", "iso")
+    spans = [m.span() for p in INVENTORY_PATTERNS for m in p.finditer(low)]
+    if not spans or _ISO_CODE.search(low):
+        return False
+    rest = list(low)
+    for s, e in spans:
+        rest[s:e] = [" "] * (e - s)
+    return not re.search(r"\d", "".join(rest))
+
 
 @dataclass
 class Intent:
-    kind: str  # sources_only | memory_command | note_command | calculation | technical | general
+    kind: str  # sources_only | memory_command | note_command | corpus_inventory | calculation | technical | general
     wants_sources: bool = False
     wants_detail: bool = False
     memory_text: str | None = None
@@ -44,6 +81,8 @@ def classify(message: str) -> Intent:
     note = NOTE_CMD.match(text)
     if note:
         return Intent("note_command", note_text=note.group(1).strip(), question=text)
+    if is_inventory_question(text):
+        return Intent("corpus_inventory", question=text)
     question = SOURCES_RE.sub(" ", text) if wants_sources else text
     question = re.sub(r"\s+", " ", question).strip(" ,.;:!?")
     if wants_sources:
@@ -52,7 +91,7 @@ def classify(message: str) -> Intent:
             return Intent("sources_only", wants_sources=True, question=question)
     calc = parse_calculation(question)
     technical = has_technical_terms(question)
-    if calc.calc_type and (calc.has_calc_verb or "=" in question):
+    if calc.calc_type and (calc.has_calc_verb or "=" in question or calc.calc_type in TABLE_LOOKUPS):
         return Intent("calculation", wants_sources, wants_detail, calc=calc, question=question)
     if calc.has_calc_verb and technical and re.search(r"\d", question):
         return Intent("calculation", wants_sources, wants_detail, calc=calc, question=question)

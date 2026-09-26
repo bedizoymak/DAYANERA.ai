@@ -82,6 +82,7 @@ class OutputValue:
     expression: str
     display: str
     unrounded: float | None = None
+    abs_tol: float | None = None  # Qwen-draft comparison: fixed absolute tolerance (no relative term)
 
 
 @dataclass

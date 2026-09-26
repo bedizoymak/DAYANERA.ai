@@ -157,6 +157,7 @@ class FakeProvider:
         self.responder: Callable[[list], str] = self.default
         self.fail_with: Exception | None = None
         self.calls: list[list] = []
+        self.options: list = []  # GenerationOptions of each call (Step 2 budget checks)
 
     @staticmethod
     def default(messages) -> str:
@@ -173,6 +174,7 @@ class FakeProvider:
         from app.inference.base import LLMResult
 
         self.calls.append(messages)
+        self.options.append(options)
         if self.fail_with:
             raise self.fail_with
         return LLMResult(content=self.responder(messages), provider=self.name, model=self.model, latency_ms=5)
@@ -223,6 +225,7 @@ def _reset_fake(request):
         fl.responder = fl.default
         fl.fail_with = None
         fl.calls.clear()
+        fl.options.clear()
     yield
 
 

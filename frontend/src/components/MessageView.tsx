@@ -6,6 +6,38 @@ import CalcDetail from './CalcDetail';
 import ModeBadge from './ModeBadge';
 import SourceList from './SourceList';
 
+interface Refusal {
+  reason?: string;
+  codes_requested?: string[];
+  codes_missing?: string[];
+}
+
+/** Muted explanation shown under a refusal; never part of the (exact) refusal content. */
+export function refusalHint(refusal: Refusal | undefined): string | null {
+  if (!refusal) return null;
+  if (refusal.codes_missing && refusal.codes_missing.length > 0) {
+    return `İstenen standart yüklü değil: ${refusal.codes_missing.join(', ')}. "hangi standartlar var" yazarak listeyi görebilirsiniz.`;
+  }
+  switch (refusal.reason) {
+    case 'no_passages':
+    case 'low_relevance':
+      return 'Bu konu yüklü standartlarda bulunamadı.';
+    case 'unsupported_numbers':
+      return 'Model yanıtındaki bazı değerler kaynakta doğrulanamadı.';
+    case 'model_refused':
+      return 'Bulunan kaynak pasajları bu soruyu yanıtlamıyor.';
+    case 'invalid_citation':
+    case 'empty_answer':
+      return 'Model yanıtı kaynak pasajlarıyla doğrulanamadı.';
+    case 'unsupported_calculation':
+      return 'Bu hesap türü yüklü standartlarla desteklenmiyor.';
+    case 'calculation_refused':
+      return 'Hesap için gereken kaynak pasajı etkin korpusta yok veya değerler standardın uygulama aralığı dışında.';
+    default:
+      return null;
+  }
+}
+
 interface Props {
   message: Message;
   onRequestSources?: () => void;
@@ -35,6 +67,7 @@ export default function MessageView({ message, onRequestSources, busy }: Props) 
     setOpen((v) => !v);
   }
 
+  const hint = refusalHint(message.metadata?.refusal as Refusal | undefined);
   const canAskSources =
     !isUser && !message.show_sources && (message.answer_mode === 'verified_source' || message.answer_mode === 'calculation');
 
@@ -45,6 +78,9 @@ export default function MessageView({ message, onRequestSources, busy }: Props) 
         <div className="msg-meta">
           <ModeBadge mode={message.answer_mode} />
           {message.metadata?.mismatch === true && <span className="chip chip-bad">Qwen ≠ motor</span>}
+          {message.metadata?.kind === 'corpus_inventory' && (
+            <span className="chip" title="Belge listesi doğrudan veritabanından; yerel model kullanılmadı">Sistem bilgisi</span>
+          )}
         </div>
       )}
       {message.attachments.length > 0 && (
@@ -57,6 +93,9 @@ export default function MessageView({ message, onRequestSources, busy }: Props) 
       <div className="msg-body">
         {isUser ? <p className="pre">{message.content}</p> : <ReactMarkdown disallowedElements={['img']} unwrapDisallowed>{message.content}</ReactMarkdown>}
       </div>
+      {!isUser && hint && (
+        <p className="refusal-hint muted small" data-testid="refusal-hint">{hint}</p>
+      )}
       {message.show_sources && <SourceList sources={message.sources} />}
       {!isUser && (calcId || canAskSources) && (
         <div className="msg-actions">

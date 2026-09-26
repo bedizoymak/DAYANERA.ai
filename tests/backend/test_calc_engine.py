@@ -226,3 +226,28 @@ def test_parse_calculation_requests(text, calc_type, expect):
 def test_parse_keeps_foreign_units_for_rejection():
     p = parse_calculation("m = 2 kg z=20 hesapla")
     assert p.inputs["m_n"] == (2.0, "kg")
+
+
+def test_iso286_basic_hole_H_and_shaft_h_limits():
+    """Step 2: 50 mm H7 / 40 mm h6 from the source-parsed Table 1 plus the basic hole/shaft rules."""
+    it7_30_50 = float(synthetic_it_values(5)[8].replace(",", "."))  # row (30,50], IT7 = 9th value
+    it6_30_50 = float(synthetic_it_values(5)[7].replace(",", "."))
+    h = run("iso286_hole_H", nominal_size=(50, "mm"), grade=(7, ""))
+    assert h.status == "ok", h.diagnostics
+    out = h.output_map()
+    assert out["EI"] == 0 and out["ES"] == pytest.approx(it7_30_50)
+    assert out["upper_size"] == pytest.approx(50 + it7_30_50 / 1000)
+    assert {e["requirement_id"] for e in h.evidence} == {"iso286.table1", "iso286.basic_hole", "iso286.hole_H"}
+    s = run("iso286_shaft_h", nominal_size=(40, "mm"), grade=(6, ""))
+    assert s.status == "ok"
+    assert s.output_map()["es"] == 0 and s.output_map()["ei"] == pytest.approx(-it6_30_50)
+    # a Qwen draft 30 µm off on a limit size is a mismatch (a 0.5 % relative tolerance would hide it)
+    good = {k: v for k, v in out.items()}
+    assert compare(h, good)["mismatch"] is False
+    cmp = compare(h, {**good, "upper_size": out["upper_size"] - 0.03})
+    assert cmp["mismatch"] is True
+    assert [i["key"] for i in cmp["items"] if i["status"] == "mismatch"] == ["upper_size"]
+    # without the basic-hole passage the engine refuses instead of assuming EI = 0
+    pages = [p for p in pages_for() if "lower limit deviation is zero" not in p.text]
+    r = run("iso286_hole_H", pages=pages, nominal_size=(50, "mm"), grade=(7, ""))
+    assert r.status == "refused" and r.message == REFUSAL_PHRASE

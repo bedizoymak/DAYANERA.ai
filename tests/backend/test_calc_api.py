@@ -158,17 +158,21 @@ def test_draft_ocr_value_rejected_until_confirmed(admin, calc_corpus, process_jo
 
 
 def test_calculation_refused_when_source_document_deleted(admin, calc_corpus):
-    docs = admin.get("/documents?q=iso1328").json()["items"]
-    doc = next(d for d in docs if d["standard_code"] == "ISO 1328-1:2013")
+    # every active ISO 1328-1 copy (other modules may have ingested the real one too)
+    docs = [d for d in admin.get("/documents?limit=500&status=active").json()["items"]
+            if d["standard_code"] == "ISO 1328-1:2013"]
+    assert docs
     body = {"calc_type": "iso1328_flank_tolerance",
             "inputs": {"m_n": {"value": 3, "unit": "mm"}, "d": {"value": 120, "unit": "mm"}, "A": {"value": 6}}}
     assert admin.post("/calculations", body).json()["status"] == "ok"
-    assert admin.delete(f"/documents/{doc['id']}", {"reason": "kaynak kaldırma testi"}).status_code == 200
+    for doc in docs:
+        assert admin.delete(f"/documents/{doc['id']}", {"reason": "kaynak kaldırma testi"}).status_code == 200
     r = admin.post("/calculations", body).json()
     assert r["status"] == "refused" and r["result"]["message"] == REFUSAL_PHRASE
     assert any(d["code"] == "missing_source" for d in r["result"]["diagnostics"])
     # owner restore brings it back after re-indexing
-    assert admin.post(f"/documents/{doc['id']}/restore").status_code == 200
+    for doc in docs:
+        assert admin.post(f"/documents/{doc['id']}/restore").status_code == 200
     from app.ingestion.jobs import run_pending
     from app.core.config import get_settings
 

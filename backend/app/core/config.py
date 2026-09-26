@@ -108,6 +108,12 @@ class Settings(BaseSettings):
     # --- retrieval / answers ---
     retrieval_top_k: int = 4
     retrieval_max_context_chars: int = 3000
+    # Step 2 Order C relevance gate (absolute, 0..1): the best passage must support at
+    # least this share of the question's significant terms, otherwise the answer is
+    # refused before any LLM call (reason "low_relevance").
+    retrieval_min_score: float = Field(default=0.4, ge=0.0, le=1.0)  # calibrated 2026-09-26, see report
+    # share of glossary concepts a passage must match to be a candidate (multi-concept questions)
+    retrieval_min_coverage: float = Field(default=0.5, ge=0.0, le=1.0)
     session_ttl_hours: int = 12
     calc_llm_compare: bool = True
     summary_every_n_messages: int = 12

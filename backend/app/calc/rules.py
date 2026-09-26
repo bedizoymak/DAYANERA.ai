@@ -37,10 +37,10 @@ class RuleContext:
 
 
 def _out(key: str, label: str, value: float, unit: str, formula_id: str, expression: str,
-         decimals: int = 4, unrounded: float | None = None) -> OutputValue:
+         decimals: int = 4, unrounded: float | None = None, abs_tol: float | None = None) -> OutputValue:
     return OutputValue(key=key, label=label, value=value, unit=unit, formula_id=formula_id,
                        expression=expression, display=f"{fmt_num(value, decimals)} {unit}".strip(),
-                       unrounded=unrounded)
+                       unrounded=unrounded, abs_tol=abs_tol)
 
 
 class Rule:
@@ -411,6 +411,87 @@ class Iso286StandardTolerance(Rule):
         ]
 
 
+class _Iso286BasicClass(Rule):
+    """Limit deviations of the basic hole H / basic shaft h (ISO 286-1:2010).
+
+    Only H and h are implemented: their fundamental deviation is zero by definition,
+    so no fundamental-deviation table (Tables 2-5) is needed. Other letters are not
+    supported and fall back to the verified-text path or are refused.
+    """
+    letter = "H"
+    inputs = (
+        InputSpec("nominal_size", "Anma ölçüsü D (nominal size)", "length", True, 1e-9, 3150.0),
+        InputSpec("grade", "Standart tolerans derecesi (ör. 7 → IT7)", "grade", True, 1, 18),
+    )
+
+    def evidence_ids(self, provided, values):
+        if self.letter == "H":
+            return ["iso286.table1", "iso286.basic_hole", "iso286.hole_H"]
+        return ["iso286.table1", "iso286.basic_shaft", "iso286.shaft_h", "iso286.shaft_ei"]
+
+    def compute(self, ctx):
+        D = ctx.values["nominal_size"]
+        grade = f"IT{int(ctx.values['grade'])}"
+        try:
+            rows = parse_table1(ctx.evidence["iso286.table1"].page_text)
+        except TableParseError as exc:
+            raise RuleRefusal(f"ISO 286-1 Tablo 1 kaynaktan güvenilir biçimde okunamadı: {exc}") from exc
+        found = lookup(rows, D, grade)
+        if found is None:
+            raise RuleRefusal(f"{grade} için {fmt_num(D)} mm anma ölçüsünde ISO 286-1 Tablo 1'de değer yok.")
+        row, it_um = found
+        cls = f"{self.letter}{int(ctx.values['grade'])}"
+        rng = f"{'—' if row.above == 0 else fmt_num(row.above)} < D ≤ {fmt_num(row.up_to)} mm"
+        if self.letter == "H":
+            lower_dev, upper_dev = 0.0, it_um
+            devs = [
+                _out("EI", f"{cls} alt sınır sapması EI (lower limit deviation)", 0.0, "µm", "ISO286-1:2010 3.1.4 / Ek B",
+                     "EI = 0 (temel delik H)", decimals=3),
+                _out("ES", f"{cls} üst sınır sapması ES (upper limit deviation)", upper_dev, "µm", "ISO286-1:2010 Ek B",
+                     f"ES = EI + IT = 0 + {grade}", decimals=3),
+            ]
+        else:
+            lower_dev, upper_dev = -it_um, 0.0
+            devs = [
+                _out("es", f"{cls} üst sınır sapması es (upper limit deviation)", 0.0, "µm", "ISO286-1:2010 3.1.6 / Şekil 9",
+                     "es = 0 (temel mil h)", decimals=3),
+                _out("ei", f"{cls} alt sınır sapması ei (lower limit deviation)", lower_dev, "µm", "ISO286-1:2010 Şekil 9",
+                     f"ei = es − IT = 0 − {grade}", decimals=3),
+            ]
+        lower_size, upper_size = D + lower_dev / 1000.0, D + upper_dev / 1000.0
+        ctx.trace += [
+            f"Tablo 1 kaynak sayfasından {len(rows)} satır okundu; D = {fmt_num(D)} mm → satır {rng}",
+            f"{grade} = {fmt_num(it_um, 3)} µm",
+            (f"Temel delik H: EI = 0; ES = EI + IT = {fmt_num(upper_dev, 3)} µm" if self.letter == "H"
+             else f"Temel mil h: es = 0; ei = es − IT = {fmt_num(lower_dev, 3)} µm"),
+            f"Sınır ölçüler: {fmt_num(lower_size, 4)} mm … {fmt_num(upper_size, 4)} mm",
+        ]
+        return [_out("IT", f"Standart tolerans {grade}", it_um, "µm", "ISO286-1:2010 Tablo 1", f"{grade} ({rng})",
+                     decimals=3)] + devs + [
+            _out("lower_size", f"{fmt_num(D)} {cls} alt sınır ölçüsü", lower_size, "mm", "ISO286-1:2010 3.2.8",
+                 "D + alt sınır sapması", decimals=4, abs_tol=0.0005),
+            _out("upper_size", f"{fmt_num(D)} {cls} üst sınır ölçüsü", upper_size, "mm", "ISO286-1:2010 3.2.8",
+                 "D + üst sınır sapması", decimals=4, abs_tol=0.0005),
+        ]
+
+
+class Iso286HoleH(_Iso286BasicClass):
+    calc_type = "iso286_hole_H"
+    letter = "H"
+    title = "Delik tolerans sınıfı H (ISO 286-1:2010, temel delik)"
+    description = ("H toleranslı delik için IT değeri, sınır sapmaları (EI = 0, ES = +IT) ve sınır ölçüleri. "
+                   "IT, ISO 286-1 Tablo 1'den etkin kaynaktan okunur.")
+
+
+class Iso286ShaftH(_Iso286BasicClass):
+    calc_type = "iso286_shaft_h"
+    letter = "h"
+    title = "Mil tolerans sınıfı h (ISO 286-1:2010, temel mil)"
+    description = ("h toleranslı mil için IT değeri, sınır sapmaları (es = 0, ei = −IT) ve sınır ölçüleri. "
+                   "IT, ISO 286-1 Tablo 1'den etkin kaynaktan okunur.")
+
+
 RULES: dict[str, Rule] = {r.calc_type: r for r in (
-    CylindricalGearGeometry(), GearPair(), Iso1328FlankTolerance(), Iso286StandardTolerance()
+    CylindricalGearGeometry(), GearPair(), Iso1328FlankTolerance(), Iso286StandardTolerance(),
+    Iso286HoleH(), Iso286ShaftH(),
 )}

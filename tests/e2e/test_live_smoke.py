@@ -166,3 +166,21 @@ def test_persistence_after_restart(api):
     assert api.get(f"/documents/{st['attachment_id']}").json()["current_version"]["ingestion_status"] == "indexed"
     assert api.get(f"/calculations/{st['calculation_id']}").json()["status"] == "ok"
     assert api.get("/audit", params={"event_type": "system.startup"}).json()["total"] >= 2
+
+
+def test_step2_inventory_is_fast_and_llm_free(api):
+    """Step 2 Order E: T2 returns the standards list without the LLM in < 2 s."""
+    conv = api.post("/conversations", json={"title": "Step 2 envanter"}, headers=H).json()["id"]
+    t0 = time.perf_counter()
+    msg = _say(api, conv, "peki elinde hangi ISO standartları var, listeler misin?")
+    assert time.perf_counter() - t0 < 2.0
+    assert msg["metadata"]["kind"] == "corpus_inventory" and msg["model"] is None
+    assert "ISO 53:1998" in msg["content"] and "ISO 21771:2007" in msg["content"]
+
+
+def test_step2_missing_standard_refusal_is_fast(api):
+    conv = api.post("/conversations", json={"title": "Step 2 eksik standart"}, headers=H).json()["id"]
+    t0 = time.perf_counter()
+    msg = _say(api, conv, "ISO 2768 m sınıfı 30-120 mm tolerans ne? kaynak ver")
+    assert time.perf_counter() - t0 < 5.0
+    assert msg["content"] == REFUSAL and msg["metadata"]["refusal"]["codes_missing"] == ["ISO 2768"]

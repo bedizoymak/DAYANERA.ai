@@ -34,7 +34,9 @@ def compare(result: CalcResult, draft_outputs: dict[str, Any] | None) -> dict[st
             items.append({"key": out.key, "engine": out.value, "llm": raw, "status": "non_numeric"})
             mismatch = True
             continue
-        tol = max(ABS_TOL_BY_UNIT.get(out.unit, 0.001), REL_TOL * abs(out.value))
+        # limit sizes (D + µm deviation) need a fixed tolerance: 0.5 % of 50 mm would hide the whole IT band
+        tol = out.abs_tol if out.abs_tol is not None else max(ABS_TOL_BY_UNIT.get(out.unit, 0.001),
+                                                              REL_TOL * abs(out.value))
         diff = abs(llm_val - out.value)
         ok = math.isfinite(llm_val) and diff <= tol
         items.append({"key": out.key, "engine": out.value, "llm": llm_val, "abs_diff": diff,

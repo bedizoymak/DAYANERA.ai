@@ -52,8 +52,15 @@ _PATTERNS: dict[str, list[re.Pattern]] = {
     "nominal_size": [
         re.compile(r"(?:anma\s*ölçüsü|nominal\s*(?:size|ölçü)|ø|Ø|\bD\s*=)\s*(?:[=:]|olan|ise)?\s*" + NUM + UNIT, I),
         re.compile(NUM + r"\s*(mm)\s*(?:anma|nominal|çap|mil|delik|için)", I),
+        re.compile(NUM + r"\s*(mm)\s*(?=[Hh]\d{1,2}\b)"),  # "50 mm H7"
     ],
 }
+
+# ISO 286 tolerance class of the basic hole "H" or basic shaft "h" (case-sensitive!)
+_TOL_CLASS = re.compile(r"(?<![A-Za-z])([Hh])\s?(\d{1,2})(?!\d)")
+_FIT_NOTATION = re.compile(r"\b[A-Za-z]{1,2}\d{1,2}\s*/\s*[A-Za-z]{1,2}\d{1,2}\b")  # H7/g6 fits: not handled here
+# deterministic ISO 286 table lookups: a question form ("... nedir?") is enough, no calc verb needed
+TABLE_LOOKUPS = {"iso286_it_tolerance", "iso286_hole_H", "iso286_shaft_h"}
 
 _KIND = {
     "z": "integer", "z1": "integer", "z2": "integer", "m_n": "length", "alpha_n": "angle", "beta": "angle",
@@ -113,7 +120,11 @@ def parse_calculation(text: str) -> ParsedCalc:
     inputs, assumed = extract_parameters(text)
     has_verb = bool(CALC_VERBS.search(text))
     calc_type: str | None = None
-    if "grade" in inputs and "nominal_size" in inputs:
+    tol_class = _TOL_CLASS.search(text)
+    if tol_class and "nominal_size" in inputs and "grade" not in inputs and not _FIT_NOTATION.search(text):
+        calc_type = "iso286_hole_H" if tol_class.group(1) == "H" else "iso286_shaft_h"
+        inputs["grade"] = (float(int(tol_class.group(2))), "")
+    elif "grade" in inputs and "nominal_size" in inputs:
         calc_type = "iso286_it_tolerance"
     elif ("A" in inputs or TOLERANCE_HINT.search(text)) and "m_n" in inputs and ("d" in inputs or "z" in inputs):
         calc_type = "iso1328_flank_tolerance"

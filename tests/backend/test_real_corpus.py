@@ -85,3 +85,14 @@ def test_real_retrieval_finds_basic_rack_pressure_angle(admin, real_corpus):
     r = admin.post("/retrieval/search", {"query": "ISO 53 standart temel kremayer profilinde basınç açısı nedir?"}).json()
     assert r["passages"] and all(p["standard_code"] == "ISO 53:1998" for p in r["passages"])
     assert any("pressure angle" in p["excerpt"].lower() for p in r["passages"])
+
+
+def test_real_h7_50mm_limits(admin, real_corpus):
+    """Step 2 gate 3: "ISO 286'ya göre 50 mm H7 toleransı nedir?" -> deterministic, sourced result."""
+    r = admin.post("/calculations", {"calc_type": "iso286_hole_H",
+                                     "inputs": {"nominal_size": {"value": 50, "unit": "mm"}, "grade": {"value": 7}}}).json()
+    assert r["status"] == "ok", r["result"]["diagnostics"]
+    out = {o["key"]: o["value"] for o in r["result"]["outputs"]}
+    assert out["IT"] == pytest.approx(25.0) and out["EI"] == 0 and out["ES"] == pytest.approx(25.0)
+    pages = {(e["requirement_id"], e["page_number"]) for e in r["result"]["evidence"]}
+    assert ("iso286.basic_hole", 8) in pages and ("iso286.hole_H", 40) in pages

@@ -145,6 +145,16 @@ source version are all audited.
 - A verified answer is accepted only if every number in it appears in the retrieved passages or the user's question.
   Otherwise the reply is `Bu kaynak setinde doğrulayamadım`.
 - If a question names a standard that is not in the active corpus (for example ISO 6336), the reply is the refusal phrase.
+  This happens at once, without retrieval or an LLM call.
+- A relevance gate refuses before any LLM call when the best passage supports too little of the question.
+  `RETRIEVAL_MIN_SCORE` (default 0.4) is the share of the question's significant terms a passage must support.
+  `RETRIEVAL_MIN_COVERAGE` (default 0.5) is the share of glossary concepts a candidate passage must match.
+- Every refusal message contains exactly the refusal phrase. The reason is stored in `metadata.refusal`, with
+  `reason`, `codes_requested` and `codes_missing`, and the UI shows a muted hint under the bubble.
+  For example: "İstenen standart yüklü değil: ISO 2768."
+- Questions such as "hangi standartlar var" or "which standards do you have" return the list of active documents
+  immediately from the database. No LLM call is made, and the reply carries a "Sistem bilgisi" chip.
+- Technical replies record per-stage timings in `metadata.timings_ms`: retrieval, generation, validation and total.
 
 ## Deterministic calculations
 
@@ -156,6 +166,7 @@ The rules are implemented only where the loaded corpus contains the defining pas
 | `gear_pair` | ISO 21771:2007 Eq. (52), (54) |
 | `iso1328_flank_tolerance` | ISO 1328-1:2013 Formulae (5)–(12), scope limits, 5.2.2 step factor, 5.2.3 rounding |
 | `iso286_it_tolerance` | ISO 286-1:2010 Table 1, parsed at runtime from the active source page and structurally validated |
+| `iso286_hole_H`, `iso286_shaft_h` | ISO 286-1:2010 Table 1 for IT, plus the basic-hole and basic-shaft rules. The hole rule is 3.1.4 with the Annex B example (EI = 0, ES = EI + IT). The shaft rule is 3.1.6 with Figures 6 and 9 (es = 0, ei = es − IT). Only the letters H and h are supported. |
 
 If a required passage is missing, deleted, superseded or unindexed, the engine refuses with the exact phrase.
 Draft OCR inputs, invalid units and unsupported formulas are also rejected.

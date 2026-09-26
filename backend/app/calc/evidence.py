@@ -111,6 +111,21 @@ REQ: dict[str, EvidenceRequirement] = {
           ("Table 1 — Values of standard tolerance grades for nominal sizes up to 3 150 mm",
            "Standard tolerance values"),
           "ISO 286-1:2010 Tablo 1: standart tolerans değerleri (IT01–IT18, 3 150 mm'ye kadar)", 26),
+        # --- ISO 286-1:2010 basic hole "H" / basic shaft "h" (Step 2: H7-type lookups) ----------
+        R("iso286.basic_hole", ISO286_1,
+          ("a basic hole is a hole for which the lower limit deviation is zero",),
+          "ISO 286-1:2010 3.1.4 Not 2: temel delik (basic hole) alt sınır sapması sıfırdır", 8),
+        R("iso286.basic_shaft", ISO286_1,
+          ("a basic shaft is a shaft for which the upper limit deviation is zero",),
+          "ISO 286-1:2010 3.1.6 Not 2: temel mil (basic shaft) üst sınır sapması sıfırdır", 8),
+        R("iso286.hole_H", ISO286_1,
+          ("the fundamental deviation can be chosen in the column H", "the lower limit deviation EI = 0",
+           "ES = EI + IT"),
+          "ISO 286-1:2010 Ek B örneği: H sütunu → EI = 0, ES = EI + IT", 40),
+        R("iso286.shaft_h", ISO286_1, ("basic shaft “h”",),
+          "ISO 286-1:2010 Şekil 6: temel mil “h”", 17),
+        R("iso286.shaft_ei", ISO286_1, ("es = 0", "ei = es - IT"),
+          "ISO 286-1:2010 Şekil 9: es = 0, ei = es − IT", 25),
     ]
 }
 

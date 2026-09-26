@@ -1,0 +1,31 @@
+# DAYANERA.ai - local-only supporting services.
+# PostgreSQL is the authoritative beta database. The port is published on
+# 127.0.0.1 only; it is never reachable from the LAN. Ollama runs natively
+# on Windows and is intentionally NOT containerised.
+name: dayanera
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: dayanera-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-dayanera}
+      POSTGRES_USER: ${POSTGRES_USER:-dayanera}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C.UTF-8"
+      TZ: UTC
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-54329}:5432"
+    volumes:
+      - dayanera_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+volumes:
+  dayanera_pgdata:
+    name: dayanera_pgdata

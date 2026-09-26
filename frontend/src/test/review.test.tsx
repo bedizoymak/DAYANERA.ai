@@ -1,0 +1,60 @@
+import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router-dom';
+import { describe, expect, it } from 'vitest';
+import ReviewPage from '../pages/ReviewPage';
+import { calls, installFetch, json } from './mockApi';
+
+const draftValue = {
+  id: 'ev1', document_id: 'd1', document_title: 'cizim.png', version_id: 'v1', version_number: 1, version_active: true,
+  page_number: 1, locator: 'görüntü', label: 'm', raw_text: 'm = 2,5 mm', context: 'Modül m = 2,5 mm z = 31',
+  value: 2.5, unit: 'mm', quantity_kind: 'length', extraction_method: 'ocr', status: 'draft_extraction',
+  original: { raw_text: 'm = 2,5 mm', value: 2.5, unit: 'mm' }, confirmed_value: null, confirmed_unit: null,
+  confirmed_at: null, review_note: null,
+};
+
+describe('Taslak çıkarım onay akışı', () => {
+  it('taslak değeri etiketler, düzenleyerek onaylar ve kuyruğu yeniler', async () => {
+    let confirmed = false;
+    installFetch([
+      {
+        method: 'GET', path: /\/extractions\/values\?status=draft_extraction$/,
+        handler: () => json({ items: confirmed ? [] : [draftValue], total: confirmed ? 0 : 1 }),
+      },
+      { method: 'GET', path: /\/extractions\/pages\?/, handler: () => json({ items: [], total: 0 }) },
+      {
+        method: 'POST', path: /\/extractions\/values\/ev1\/confirm$/,
+        handler: () => {
+          confirmed = true;
+          return json({ ...draftValue, status: 'user_confirmed', confirmed_value: 2.75, confirmed_unit: 'mm' });
+        },
+      },
+    ]);
+    render(<MemoryRouter><ReviewPage /></MemoryRouter>);
+    const row = await screen.findByTestId('draft-value-row');
+    expect(within(row).getByText('Taslak çıkarım')).toBeInTheDocument();
+    expect(within(row).getByText('m = 2,5 mm')).toBeInTheDocument();
+    const valueInput = within(row).getByLabelText('Değer');
+    await userEvent.clear(valueInput);
+    await userEvent.type(valueInput, '2,75');
+    await userEvent.click(within(row).getByRole('button', { name: 'Onayla' }));
+    expect(await screen.findByRole('status')).toHaveTextContent('onaylandı');
+    const confirm = calls.find((c) => c.url.endsWith('/extractions/values/ev1/confirm'));
+    expect(confirm?.body).toEqual({ value: 2.75, unit: 'mm', note: null });
+    expect(confirm?.headers['X-DAYANERA-CSRF']).toBe('1');
+    expect(await screen.findByText('Bekleyen taslak değer yok.')).toBeInTheDocument();
+  });
+
+  it('reddetme kararını gönderir', async () => {
+    installFetch([
+      { method: 'GET', path: /\/extractions\/values\?status=draft_extraction$/, handler: () => json({ items: [draftValue], total: 1 }) },
+      { method: 'GET', path: /\/extractions\/pages\?/, handler: () => json({ items: [], total: 0 }) },
+      { method: 'POST', path: /\/extractions\/values\/ev1\/reject$/, handler: () => json({ ...draftValue, status: 'rejected' }) },
+    ]);
+    render(<MemoryRouter><ReviewPage /></MemoryRouter>);
+    const row = await screen.findByTestId('draft-value-row');
+    await userEvent.click(within(row).getByRole('button', { name: 'Reddet' }));
+    expect(await screen.findByRole('status')).toHaveTextContent('reddedildi');
+    expect(calls.some((c) => c.url.endsWith('/extractions/values/ev1/reject'))).toBe(true);
+  });
+});

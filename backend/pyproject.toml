@@ -1,0 +1,10 @@
+[project]
+name = "dayanera-backend"
+version = "0.1.0b0"
+description = "DAYANERA.ai local-first engineering assistant backend (FastAPI, localhost only)"
+requires-python = ">=3.12"
+readme = "../README.md"
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"

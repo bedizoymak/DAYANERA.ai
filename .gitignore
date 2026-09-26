@@ -1,0 +1,74 @@
+# =====================================================================
+# DAYANERA.ai - Git ignore rules
+# Private runtime data, secrets and generated artefacts must NEVER be
+# committed. Run scripts/git-check-private-data.ps1 before every commit.
+# =====================================================================
+
+# --- Secrets / local configuration ---------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.pfx
+*.p12
+secrets/
+
+# --- Runtime data root (documents, versions, media, indexes, logs) --
+data/
+/data/
+postgres-data/
+pgdata/
+*.dump
+*.sql.gz
+*.backup
+
+# --- DAYANERA-generated advice notes (never versioned) --------------
+agent-notes/
+
+# --- Required final report (untracked by contract) -------------------
+IMPLEMENTATION_REPORT.md
+
+# --- External third-party reference clones (separate Git repositories) -
+# Not part of DAYANERA source; never add them as gitlinks/submodules here.
+repositories/
+
+# --- ISO corpus / private source documents ---------------------------
+# The ISO booklets are licensed documents and private runtime inputs.
+iso booklets/
+
+# --- Logs ------------------------------------------------------------
+*.log
+logs/
+
+# --- Python ------------------------------------------------------------
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+*.egg-info/
+.coverage
+htmlcov/
+
+# --- Node / frontend ------------------------------------------------
+node_modules/
+dist/
+coverage/
+frontend/test-results/
+frontend/playwright-report/
+frontend/blob-report/
+*.tsbuildinfo
+
+# --- Editors / OS ----------------------------------------------------
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Claude Code local settings ---------------------------------------
+.claude/settings.local.json

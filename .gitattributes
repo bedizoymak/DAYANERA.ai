@@ -1,0 +1,6 @@
+# Normalise text line endings; keep PowerShell scripts CRLF for Windows PowerShell 5.1.
+* text=auto
+*.ps1 text eol=crlf
+*.sh text eol=lf
+*.pdf binary
+*.png binary

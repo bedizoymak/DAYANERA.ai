@@ -18,6 +18,8 @@ export default defineConfig(({ mode }) => {
   if (!LOOPBACK.has(targetHost)) {
     throw new Error('VITE_API_PROXY_TARGET yalnızca yerel FastAPI adresini gösterebilir.');
   }
+  // Lets the local Docker Playwright browser reach the app for testing.
+  const allowedHosts = ['host.docker.internal'];
   const proxy = { '/api': { target: apiTarget, changeOrigin: false, ws: false } };
   const securityHeaders = {
     'Content-Security-Policy':
@@ -30,8 +32,8 @@ export default defineConfig(({ mode }) => {
   return {
     envDir: '..',
     plugins: [react()],
-    server: { host, port, strictPort: true, proxy },
-    preview: { host, port, strictPort: true, proxy, headers: securityHeaders },
+    server: { host, port, strictPort: true, allowedHosts, proxy },
+    preview: { host, port, strictPort: true, allowedHosts, proxy, headers: securityHeaders },
     build: { outDir: 'dist', sourcemap: false },
     test: {
       environment: 'jsdom',

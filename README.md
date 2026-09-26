@@ -89,6 +89,16 @@ powershell -ExecutionPolicy Bypass -File scripts\stop-local.ps1    # stops UI/AP
 - API contract: `http://127.0.0.1:8000/api/v1/openapi.json`. The export is in `docs/openapi.json`; regenerate it with `python -m app.cli export-openapi` from `backend\`.
   The interactive Swagger UI is disabled because it would load scripts from a public CDN.
 
+### Terminal command
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\install-cli.ps1   # once: puts bin\ on the user PATH
+dayanera                  # chat in the terminal (same login, scopes and audit as the browser)
+dayanera -p "soru"        # one question, print the answer
+dayanera start -Open      # / dayanera stop — the start/stop scripts
+dayanera sync-status      # any app.cli command; dayanera logout ends the stored session
+```
+
 ## Database
 
 - Migrations are plain PostgreSQL SQL in `database/migrations/sql/`, applied by Alembic (`python -m app.cli migrate` from `backend\`).

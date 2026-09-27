@@ -43,6 +43,28 @@ def normalize_text(text: str) -> str:
     return out.strip()
 
 
+BLOCK_KINDS = ("heading", "text", "table", "formula", "list", "note", "caption")
+
+
+@dataclass
+class Block:
+    """A structural unit of a page, in reading order (parser-independent).
+
+    ``clause`` is the ISO clause/subclause number the block starts ("4.2.4",
+    "A.1", "Annex A"); ``label`` names tables and equations ("Table 2", "(1)").
+    ``confidence`` is the parser's own confidence for model-produced content
+    (e.g. a recognized formula); ``None`` for text read from the PDF text layer.
+    """
+
+    kind: str
+    text: str
+    clause: str | None = None
+    level: int | None = None
+    label: str | None = None
+    confidence: float | None = None
+    source: str | None = None  # producing layer: "pymupdf", "docling:table", ...
+
+
 @dataclass
 class PageOut:
     page_number: int
@@ -50,6 +72,10 @@ class PageOut:
     method: str
     locator: str
     ocr_confidence: float | None = None
+    blocks: list[Block] = field(default_factory=list)
+    quality: dict[str, Any] = field(default_factory=dict)
+    parser: str | None = None
+    parser_version: str | None = None
 
 
 @dataclass
@@ -61,6 +87,8 @@ class ExtractionOutput:
     stored_only_reason: str | None = None
     archive_members: list[dict[str, Any]] = field(default_factory=list)
     media: list[str] = field(default_factory=list)
+    parser: str | None = None
+    parser_version: str | None = None
 
 
 @dataclass

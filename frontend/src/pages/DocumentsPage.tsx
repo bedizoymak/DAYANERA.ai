@@ -11,8 +11,12 @@ const STATUS_TR: Record<string, string> = {
   active: 'etkin', deleted: 'silindi', pending: 'bekliyor', failed: 'başarısız', archived: 'arşiv',
   indexed: 'indekslendi', stored_only: 'yalnızca arşivlendi', queued: 'kuyrukta', processing: 'işleniyor',
   superseded: 'yerine yenisi geldi',
+  // verified-corpus lifecycle (document_versions.corpus_status)
+  candidate: 'aday', extracted: 'onay bekliyor', needs_review: 'inceleme gerekli', verified: 'doğrulandı',
 };
 const tr = (s: string | null | undefined) => (s ? STATUS_TR[s] ?? s : '—');
+const corpusChip = (s: string | undefined) =>
+  s === 'verified' ? 'chip-ok' : s === 'failed' ? 'chip-bad' : 'chip-warn';
 
 export default function DocumentsPage() {
   const { user } = useAuth();
@@ -175,7 +179,11 @@ export default function DocumentsPage() {
                 <tr key={d.id} className={selected?.id === d.id ? 'row-selected' : ''}>
                   <td>
                     <button type="button" className="link-btn" onClick={() => void open(d)}>{d.title}</button>
-                    {d.is_verified_corpus && <span className="chip chip-ok">ISO korpusu</span>}
+                    {d.is_verified_corpus && (
+                      <span className={`chip ${corpusChip(d.current_version?.corpus_status)}`}>
+                        ISO korpusu · {tr(d.current_version?.corpus_status)}
+                      </span>
+                    )}
                   </td>
                   <td><span className={`chip st-${d.status}`}>{tr(d.status)}</span></td>
                   <td>{d.current_version?.category ?? '—'}</td>
@@ -201,6 +209,31 @@ export default function DocumentsPage() {
                   <dt>Etkin sürüm</dt><dd>v{cv.version_number} · {formatBytes(cv.size_bytes)} · {cv.mime_type}</dd>
                   <dt>SHA-256</dt><dd className="mono small">{cv.sha256}</dd>
                   <dt>İşleme</dt><dd>{tr(cv.ingestion_status)}{cv.ingestion_error ? ` — ${cv.ingestion_error}` : ''}</dd>
+                  {cv.corpus_status && (
+                    <>
+                      <dt>Korpus durumu</dt>
+                      <dd>
+                        <span className={`chip ${corpusChip(cv.corpus_status)}`}>{tr(cv.corpus_status)}</span>
+                        {cv.parser ? ` · ayrıştırıcı: ${cv.parser}` : ''}
+                        {cv.review_note ? ` · not: ${cv.review_note}` : ''}
+                      </dd>
+                    </>
+                  )}
+                  {(cv.quality_report?.gates ?? []).filter((g) => g.status !== 'pass').length > 0 && (
+                    <>
+                      <dt>Kalite kapıları</dt>
+                      <dd>
+                        <ul className="small">
+                          {(cv.quality_report?.gates ?? []).filter((g) => g.status !== 'pass').map((g) => (
+                            <li key={g.id}>
+                              {g.id}: {g.status}{g.detail ? ` — ${g.detail}` : ''}
+                              {g.pages && g.pages.length > 0 ? ` (s. ${g.pages.slice(0, 12).join(', ')})` : ''}
+                            </li>
+                          ))}
+                        </ul>
+                      </dd>
+                    </>
+                  )}
                   {cv.extraction_summary?.counts && (
                     <><dt>Çıkarım</dt><dd>{Object.entries(cv.extraction_summary.counts).map(([k, v]) => `${k}: ${v}`).join(' · ')}</dd></>
                   )}

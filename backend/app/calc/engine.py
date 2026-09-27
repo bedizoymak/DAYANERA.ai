@@ -7,6 +7,7 @@ from dataclasses import asdict
 
 from app.calc.evidence import REQ, EvidenceResolver
 from app.calc.rules import RULES, RuleContext, RuleInputError, RuleRefusal
+from app.calc.presentation import enrich_outputs, trace_to_latex
 from app.calc.types import CalcRequest, CalcResult, Diagnostic
 from app.calc.units import InvalidUnitError, to_canonical
 from app.domain.enums import REFUSAL_PHRASE
@@ -139,6 +140,8 @@ class CalculationEngine:
         result.assumptions = ctx.assumptions
         result.constants = ctx.constants
         result.trace = ctx.trace
+        enrich_outputs(result.outputs, ctx.values)
+        result.trace_latex = trace_to_latex(ctx.trace)
         result.diagnostics = ctx.diagnostics + [
             Diagnostic("info", "validated", "Tüm formül ve sabitler etkin doğrulanmış ISO kaynak pasajlarına bağlandı.")
         ]

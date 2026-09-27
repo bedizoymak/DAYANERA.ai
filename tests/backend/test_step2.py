@@ -16,12 +16,12 @@ REFUSAL_BYTES = "Bu kaynak setinde doğrulayamadım".encode()
 
 
 def _scan_and_process(settings):
-    from app.ingestion.jobs import run_pending
+    from conftest import run_jobs
     from app.ingestion.watcher import Watcher
 
     time.sleep(2.1)
     Watcher(settings).scan()
-    run_pending(settings)
+    run_jobs(settings)
 
 
 @pytest.fixture(scope="module")

@@ -35,7 +35,7 @@ def test_health_and_readiness_are_public_and_secret_free(client, settings):
     h = client.get("/api/v1/health").json()
     assert h["status"] == "ok"
     r = client.get("/api/v1/readiness").json()
-    assert r["database"]["ok"] and r["database"]["migration_revision"] == "0001_initial"
+    assert r["database"]["ok"] and r["database"]["migration_revision"] == "0002_canonical_ingestion"
     body = json.dumps(r)
     assert settings.postgres_password.get_secret_value() not in body
 

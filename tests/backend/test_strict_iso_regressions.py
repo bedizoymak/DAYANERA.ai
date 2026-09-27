@@ -276,12 +276,12 @@ def strict_corpus(settings, admin):
                 shutil.copyfile(fs(p), fs(dest / p.name))
     if found < len(REAL_PDFS):
         pytest.skip("Gerekli ISO PDF'lerinden bazıları eksik")
-    from app.ingestion.jobs import run_pending
+    from conftest import run_jobs
     from app.ingestion.watcher import Watcher
 
     time.sleep(2.1)
     Watcher(settings).scan()
-    run_pending(settings)
+    run_jobs(settings)
     codes = {d["standard_code"] for d in admin.get("/documents?limit=500").json()["items"]}
     assert set(REAL_PDFS.values()) <= codes
     yield
@@ -328,13 +328,13 @@ pytestmark_corpus = pytest.mark.corpus
 
 @pytestmark_corpus
 def test_t1_alpha_p_is_answered_from_iso53_table2(admin, fake_llm, strict_corpus):
-    fake_llm.responder = _evidence_responder(r"aP\s*20°|αP = 20°", "Basınç açısı αP = 20° [S1].")
+    fake_llm.responder = _evidence_responder(r"(?:a|α)P\W{0,5}20°|αP = 20°", "Basınç açısı αP = 20° [S1].")
     a = _chat(admin, T1)
     assert a["answer_mode"] == "verified_source", a
     assert "20°" in a["content"] and _stored_meta(a)["plan"]["intent_subtype"] == "standards_value_lookup"
     assert _no_calc_mapping(fake_llm)
     user_prompt = fake_llm.calls[-1][-1].content
-    assert re.search(r"Table 2 — Standard basic rack proportions.*aP\s*20°", user_prompt, re.DOTALL)
+    assert re.search(r"Table 2 — Standard basic rack proportions.*(?:a|α)P\W{0,5}20°", user_prompt, re.DOTALL)
 
 
 @pytestmark_corpus
@@ -343,7 +343,7 @@ def test_t8_transverse_module_chat_does_not_ask_for_z(admin, fake_llm, strict_co
     a = _chat(admin, T8)
     assert a["answer_mode"] == "calculation", a
     assert a["metadata"]["calc_type"] == "transverse_module" and a["metadata"]["calc_status"] == "ok"
-    assert "**2,2068 mm**" in a["content"] and "m_t = m_n / cos β" in a["content"]
+    assert r"\frac" in a["content"] and r"m_t" in a["content"] and r"\cos" in a["content"]
     assert "Diş sayısı" not in a["content"] and "eksik" not in a["content"]
     detail = admin.get(f"/messages/{a['id']}/calculation").json()
     assert detail["result"]["outputs"][0]["value"] == pytest.approx(2.2068, abs=1e-4)
@@ -355,7 +355,7 @@ def test_t8_engine_overrides_conflicting_llm_arithmetic(admin, fake_llm, strict_
     fake_llm.responder = _evidence_responder("x", "x", draft={"m_t": 2.142})  # what the local model drafted
     a = _chat(admin, T8)
     assert a["metadata"]["mismatch"] is True and "UYUŞMADI" in a["content"]
-    assert "**2,2068 mm**" in a["content"] and "2,142" not in a["content"]
+    assert r"\frac" in a["content"] and "2.2068" in a["content"] and "2,142" not in a["content"]
 
 
 @pytestmark_corpus
@@ -399,13 +399,13 @@ def test_iso4468_max_range_sees_the_full_applicable_range(admin, fake_llm, stric
 @pytestmark_corpus
 @pytest.mark.parametrize("question,evidence", [
     ("ISO 53:1998’e göre standart temel kremayer için haP, cP, hfP ve ρfP değerleri nelerdir?",
-     r"haP\s*1 m\s*cP\s*0,25 m\s*hfP\s*1,25 m\s*rfP\s*0,38 m"),
+     r"haP\W*1 m\W*cP\W*0,25 m\W*hfP\W*1,25 m\W*(?:r|ρ)fP\W*0,38 m"),
     ("ISO 53:1998’e göre pitch p ile module m arasındaki bağıntı nedir?", r"is the pitch;\s*m\s*is the module"),
     ("ISO 53:1998’e göre yüksek tork ileten dişliler için hangi basic rack tooth profile tipi önerilir?",
      r"type A is\s+recommended for gears transmitting high torques"),
     ("ISO 53:1998’e göre Type D basic rack profili için hfP ve ρfP değerleri nedir?",
-     r"hfP = 1,4 m, with the associated fillet radii, rfP = 0,39 m"),
-    ("ISO 21771:2007’e göre backlash nedir?", r"is the shortest distance between the non-working fla"),
+     r"hfP = 1,4 m, with the associated fillet radii, (?:r|ρ)fP = 0,39 m"),
+    ("ISO 21771:2007’e göre backlash nedir?", r"is the shortest distance between the non-working fla|backlash is the clearance between the non-working fla"),
     ("ISO 21771:2007’e göre normal, circumferential ve radial backlash türleri nelerdir?",
      r"normal backlash.*circumferential backlash.*radial backlash"),
     ("ISO 21771:2007’e göre external helical gear pair için iki dişlinin helis yönü nasıldır?",

@@ -1,6 +1,8 @@
 """Document ingestion pipeline: versions, extraction, indexing, lineage."""
 from __future__ import annotations
 
+import hashlib
+import importlib.metadata
 import logging
 import os
 import re
@@ -8,7 +10,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import BinaryIO
 
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, select, text, update
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings, get_settings
@@ -24,14 +26,16 @@ from app.db.models import (
     KnowledgeArea,
 )
 from app.domain.enums import DRAFT_METHODS, ConfidenceStatus
-from app.ingestion.chunker import chunk_page
+from app.ingestion import quality
+from app.ingestion.chunker import chunk_document
 from app.ingestion.detect import Detected, detect
 from app.ingestion.extractors.archive import extract_archive
 from app.ingestion.extractors.base import ExtractContext, ExtractionOutput
 from app.ingestion.extractors.media import extract_audio, extract_image, extract_video
 from app.ingestion.extractors.office import extract_docx, extract_pptx, extract_text, extract_xlsx
 from app.ingestion.extractors.pdf import extract_pdf
-from app.ingestion.standard_code import clean_title, detect_standard_code
+from app.ingestion.quality import PIPELINE_VERSION
+from app.ingestion.standard_code import clean_title, detect_standard_code, validate_code
 from app.ingestion.storage import Storage, read_head, sha256_file
 from app.ingestion.values import extract_candidates
 from app.services import audit
@@ -47,7 +51,31 @@ def _now() -> datetime:
 # ---------------------------------------------------------------------------
 # extraction dispatch
 # ---------------------------------------------------------------------------
+# tool that produced the text of each non-PDF category (PDFs name their parser in extract_pdf)
+_CATEGORY_TOOL = {"docx": "python-docx", "xlsx": "openpyxl", "pptx": "python-pptx", "text": None,
+                  "image": "rapidocr-onnxruntime", "audio": "faster-whisper", "video": "faster-whisper",
+                  "zip": None, "tar": None}
+
+
+def _tool_version(dist: str | None) -> str:
+    if dist is None:
+        return "stdlib"
+    try:
+        return f"{dist} {importlib.metadata.version(dist)}"
+    except importlib.metadata.PackageNotFoundError:
+        return dist
+
+
 def extract_bytes(data: bytes, det: Detected, ctx: ExtractContext) -> ExtractionOutput:
+    out = _extract_bytes(data, det, ctx)
+    if out.parser is None:  # provenance: every chunk names the tool that produced its text
+        tool = _CATEGORY_TOOL.get(det.category)
+        out.parser = tool or det.category
+        out.parser_version = _tool_version(tool)
+    return out
+
+
+def _extract_bytes(data: bytes, det: Detected, ctx: ExtractContext) -> ExtractionOutput:
     c = det.category
     if c == "pdf":
         return extract_pdf(data, ctx)
@@ -266,6 +294,60 @@ def _link_references(db: Session, doc: Document, full_text: str) -> int:
     return created
 
 
+def _write_chunks(db: Session, doc: Document, ver: DocumentVersion, result: ExtractionOutput,
+                  page_rows: dict[int, DocumentPage]) -> list[quality.ChunkFacts]:
+    """Persist structure-aware chunks with full lineage, then read back the index coverage."""
+    facts: list[quality.ChunkFacts] = []
+    for idx, (p, ch) in enumerate(chunk_document(result.pages)):
+        page = page_rows[p.page_number]
+        status = page.confidence_status
+        if any(s.endswith("_model") for s in ch.sources) and status == ConfidenceStatus.VERIFIED_SOURCE.value:
+            status = ConfidenceStatus.DRAFT_EXTRACTION.value  # model-generated text (e.g. formula LaTeX) is a draft
+        chash = hashlib.sha256(ch.text.encode("utf-8")).hexdigest()
+        db.add(DocumentChunk(
+            document_id=doc.id, version_id=ver.id, page_id=page.id, chunk_index=idx, page_number=ch.page_number,
+            locator=ch.locator, char_start=ch.char_start, char_end=ch.char_end, text=ch.text,
+            extraction_method=p.method, confidence_status=status, page_start=ch.page_start, page_end=ch.page_end,
+            clause=ch.clause, heading=ch.heading, content_type=ch.content_type, standard_code=doc.standard_code,
+            extraction_confidence=(p.quality or {}).get("score"), source_hash=ver.sha256, content_hash=chash,
+            parser=page.parser, parser_version=page.parser_version))
+        facts.append(quality.ChunkFacts(
+            page_number=ch.page_number, text=ch.text, content_type=ch.content_type, clause=ch.clause,
+            has_lineage=bool(page.id and ch.page_start and ver.sha256 and page.parser), content_hash=chash,
+            sources=ch.sources, heading=ch.heading))
+    db.flush()
+    if facts:
+        empty = {r[0] for r in db.execute(text(
+            "SELECT chunk_index FROM document_chunks WHERE version_id = :v AND length(tsv) = 0"), {"v": ver.id})}
+        for i, f in enumerate(facts):
+            # punctuation-only fragments legitimately have no lexemes
+            f.tsv_empty = i in empty and bool(re.search(r"\w", f.text))
+    return facts
+
+
+def _revoke_verification(db: Session, doc: Document, ver: DocumentVersion, actor: Actor, reason: str) -> None:
+    if ver.corpus_status != "verified":
+        return
+    ver.verified_by = ver.verified_at = ver.verified_fingerprint = None
+    audit.record(db, actor, "corpus.verification_revoked", target_type="document", target_id=doc.id,
+                 details={"version": ver.version_number, "reason": reason})
+
+
+def _apply_corpus_status(db: Session, doc: Document, ver: DocumentVersion, report: dict, actor: Actor) -> None:
+    """Gate outcome -> corpus status. An approval survives re-indexing only for an identical extraction."""
+    outcome = report.get("outcome", "failed")
+    fp = report.get("fingerprint")
+    keep = (ver.corpus_status == "verified" and outcome != "failed" and ver.ingestion_status == "indexed"
+            and fp is not None and fp == ver.verified_fingerprint)
+    if not keep:
+        _revoke_verification(db, doc, ver, actor, "extraction_changed" if outcome != "failed" else "extraction_failed")
+    ver.corpus_status = "verified" if keep else outcome
+    ver.quality_report = report
+    audit.record(db, actor, "corpus.quality_gates", target_type="document", target_id=doc.id,
+                 details={"version": ver.version_number, "outcome": outcome, "corpus_status": ver.corpus_status,
+                          "fingerprint": fp, "gates": {g["id"]: g["status"] for g in report.get("gates", [])}})
+
+
 def process_version(db: Session, version_id: uuid.UUID, *, actor: Actor | None = None, settings: Settings | None = None) -> str:
     """Extract, index and activate one version. Returns the ingestion status."""
     settings = settings or get_settings()
@@ -294,6 +376,10 @@ def process_version(db: Session, version_id: uuid.UUID, *, actor: Actor | None =
         doc = db.get(Document, ver.document_id)
         ver.ingestion_status = "failed"
         ver.ingestion_error = f"{type(exc).__name__}: {exc}"[:1000]
+        _revoke_verification(db, doc, ver, actor, "extraction_failed")
+        ver.corpus_status = "failed"
+        ver.quality_report = {"pipeline_version": PIPELINE_VERSION, "outcome": "failed",
+                              "gates": [{"id": "extraction", "status": "fail", "detail": ver.ingestion_error}]}
         if not ver.is_active:
             ver.state = "failed"
         if doc.current_version_id is None:
@@ -315,41 +401,37 @@ def process_version(db: Session, version_id: uuid.UUID, *, actor: Actor | None =
     db.execute(delete(ArchiveMember).where(ArchiveMember.version_id == ver.id))
     db.flush()
 
-    # standard code & title (verified corpus documents)
+    # standard code & title (verified corpus documents), validated deterministically
     first_text = "\n".join(p.text for p in result.pages[:3])
     code = detect_standard_code(first_text, doc.original_filename)
     if code:
         doc.standard_code = code
+    code_check = validate_code(doc.standard_code, doc.original_filename)
     if doc.source_kind == "watched":
         doc.title = clean_title(doc.original_filename, doc.standard_code)
 
     draft_value_pages = 0
-    chunk_index = 0
     counts = {"pages": 0, "chunks": 0, "draft_pages": 0, "verified_pages": 0, "values": 0}
     methods: dict[str, int] = {}
+    page_rows: dict[int, DocumentPage] = {}
     for p in result.pages:
         status = _chunk_status(area_verified, p.method)
         prior = prior_confirm.get(p.page_number)
         page = DocumentPage(document_id=doc.id, version_id=ver.id, page_number=p.page_number, locator=p.locator,
                             text=p.text, extraction_method=p.method, confidence_status=status,
-                            ocr_mean_confidence=p.ocr_confidence)
+                            ocr_mean_confidence=p.ocr_confidence, parser=p.parser or result.parser,
+                            parser_version=p.parser_version or result.parser_version, quality=p.quality or {})
         if prior and prior[4] == p.text and status == ConfidenceStatus.DRAFT_EXTRACTION.value:
             page.confidence_status, page.confirmed_by, page.confirmed_at, page.review_note = prior[:4]
         db.add(page)
         db.flush()
+        page_rows[p.page_number] = page
         methods[p.method] = methods.get(p.method, 0) + 1
         counts["pages"] += 1
         if page.confidence_status == "draft_extraction":
             counts["draft_pages"] += 1
         if page.confidence_status == "verified_source":
             counts["verified_pages"] += 1
-        for ch in chunk_page(p.page_number, p.locator, p.text):
-            db.add(DocumentChunk(document_id=doc.id, version_id=ver.id, page_id=page.id, chunk_index=chunk_index,
-                                 page_number=ch.page_number, locator=ch.locator, char_start=ch.char_start,
-                                 char_end=ch.char_end, text=ch.text, extraction_method=p.method,
-                                 confidence_status=page.confidence_status))
-            chunk_index += 1
-            counts["chunks"] += 1
         # candidate engineering values from OCR / transcripts -> review queue
         if p.method in DRAFT_METHODS and not had_values and draft_value_pages < settings.draft_value_max_pages:
             draft_value_pages += 1
@@ -366,14 +448,47 @@ def process_version(db: Session, version_id: uuid.UUID, *, actor: Actor | None =
     for m in result.archive_members:
         db.add(ArchiveMember(version_id=ver.id, **m))
 
+    facts = _write_chunks(db, doc, ver, result, page_rows)
+    counts["chunks"] = len(facts)
+
     ver.page_count = result.metadata.get("page_count", len(result.pages)) or len(result.pages)
     ver.metadata_ = {**(ver.metadata_ or {}), **{k: v for k, v in result.metadata.items() if k != "pdf_metadata"},
-                     "pdf_metadata": result.metadata.get("pdf_metadata"), "media": result.media}
+                     "pdf_metadata": result.metadata.get("pdf_metadata"), "media": result.media,
+                     "standard_code_check": code_check}
     ver.extraction_summary = {"counts": counts, "methods": methods, "warnings": result.warnings,
                               "stored_only_reason": result.stored_only_reason}
-    ver.ingestion_status = "stored_only" if result.stored_only and not result.pages else "indexed"
+    ver.parser, ver.parser_version = result.parser, result.parser_version
     ver.ingestion_error = None
     ver.ingested_at = _now()
+    if result.stored_only and not result.pages:
+        ver.ingestion_status = "stored_only"
+        report = {"pipeline_version": PIPELINE_VERSION, "outcome": "failed",
+                  "gates": [{"id": "content", "status": "fail", "detail": result.stored_only_reason or "içerik yok"}]}
+    else:
+        report = quality.evaluate(
+            is_pdf=(ver.metadata_ or {}).get("category") == "pdf", verified_area=area_verified,
+            standard_code=doc.standard_code, code_check=code_check,
+            validation=result.metadata.get("pdf_validation"), page_count=ver.page_count,
+            blank_pages=result.metadata.get("blank_pages", []), pages=result.pages, chunks=facts,
+            layout=result.metadata.get("layout"), parser=result.parser, parser_version=result.parser_version)
+        # "indexed" only when chunks exist and the full-text index covers every one of them
+        blocking = {g["id"] for g in report["gates"] if g["status"] == "fail"}
+        if blocking & {"chunk_lineage", "fulltext_index"}:
+            ver.ingestion_status = "failed"
+            ver.ingestion_error = f"index_verification_failed: {', '.join(sorted(blocking))}"
+        else:
+            ver.ingestion_status = "indexed"
+    _apply_corpus_status(db, doc, ver, report, actor)
+    if ver.ingestion_status == "failed":
+        if not ver.is_active:
+            ver.state = "failed"
+        if doc.current_version_id is None:
+            doc.status = "failed"
+        audit.record(db, actor, "ingestion.failed", outcome="failure", target_type="document", target_id=doc.id,
+                     details={"version": ver.version_number, "error": ver.ingestion_error})
+        db.commit()
+        write_manifest(db, storage, doc.id)
+        return "failed"
     if doc.status == "deleted":
         # a logically deleted document never becomes an active source again by re-indexing
         ver.is_active = False
@@ -385,7 +500,8 @@ def process_version(db: Session, version_id: uuid.UUID, *, actor: Actor | None =
     rel_count = _link_references(db, doc, "\n".join(p.text for p in result.pages))
     audit.record(db, actor, "ingestion.completed", target_type="document", target_id=doc.id,
                  details={"version": ver.version_number, "status": ver.ingestion_status, **counts,
-                          "relationships_created": rel_count})
+                          "relationships_created": rel_count, "corpus_status": ver.corpus_status,
+                          "parser": ver.parser, "gates_outcome": report.get("outcome")})
     db.commit()
     write_manifest(db, storage, doc.id)
     return ver.ingestion_status

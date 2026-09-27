@@ -47,6 +47,12 @@ CODE_RULE = (
     "tanımı veya değeri (tablo satırı, şekil başlığı, anahtar/key, not) kaynaktaki terimleriyle aktar; birden çok "
     "kod varsa her birini ayrı ayrı yaz."
 )
+FORMULA_RULE = (
+    "Soru bir formül/bağıntı soruyor (hesap değil): formülü yalnızca pasajda okunur biçimde yazdığı kadarıyla aktar "
+    "ve madde/eşitlik numarasını belirt (ör. 4.2.4, Eşitlik (1)). PDF'den çıkarılan formül metni parçalı olabilir "
+    "(ör. 'd = z m t = cos z m n β (1)'): parçaları kendin yeniden düzenleyip formül KURMA, eksik terim veya "
+    "işlem EKLEME; pasajdaki tanım cümlesini ve eşitlik numarasını aktar. Sayısal hesap yapma."
+)
 RANGE_RULE = (
     "Soru bir aralık, sınır, maksimum veya minimum soruyor: aynı varlığa (ör. aynı ağız/diş sayısı, aynı sınıf) ait "
     "TÜM tablo satırlarını ve genel geçerlilik ifadelerini birlikte değerlendir; yalnızca ilk eşleşen satırı yanıt "

@@ -102,6 +102,12 @@ class Settings(BaseSettings):
     archive_max_member_bytes: int = 512 * 1024 * 1024
     archive_max_compression_ratio: int = 200
     draft_value_max_pages: int = 12
+    # PDF parser layer (see app/ingestion/extractors/pdf.py): pymupdf | hybrid | docling.
+    # Docling runs out of process in its own virtual environment (DOCLING_PYTHON).
+    pdf_parser: Literal["pymupdf", "hybrid", "docling"] = "pymupdf"
+    docling_python: str = ""
+    docling_formula_enrichment: bool = False
+    docling_timeout_seconds: int = Field(default=3600, ge=60, le=6 * 3600)
     transcription_enabled: bool = True
     whisper_model_name: str = "small"
     # optional read-only override of the model folder (default: DATA_ROOT/models/faster-whisper-<name>)

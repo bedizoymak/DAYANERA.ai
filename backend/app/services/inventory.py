@@ -14,20 +14,25 @@ from sqlalchemy.orm import Session
 from app.services.access import ScopeSet
 
 _ACTIVE_SQL = """
-SELECT d.standard_code, d.title, d.original_filename, ka.is_verified_corpus
+SELECT d.standard_code, d.title, d.original_filename, ka.is_verified_corpus, v.corpus_status
 FROM documents d
 LEFT JOIN knowledge_areas ka ON ka.id = d.knowledge_area_id
+LEFT JOIN document_versions v ON v.id = d.current_version_id
 WHERE d.status = 'active' AND {scope}
 """
 
 _REQUESTED = re.compile(r"\biso\s?(/\s?tr\s?)?(\d{2,5}(?:-\d{1,2})?)", re.IGNORECASE)
+CORPUS_STATUS_TR = {"candidate": "işlenmeyi bekliyor", "extracted": "onay bekliyor", "needs_review": "inceleme gerekiyor",
+                    "failed": "çıkarım başarısız", "verified": "doğrulandı"}
 
 
 @dataclass
 class InventoryDoc:
     code: str | None
     title: str
-    verified_corpus: bool
+    verified_corpus: bool  # in a verified-corpus area AND approved (corpus_status 'verified')
+    in_verified_area: bool = False
+    corpus_status: str | None = None
 
 
 def _natural_key(code: str | None, title: str) -> tuple:
@@ -49,13 +54,19 @@ def list_active_documents(db: Session, scopes: ScopeSet) -> list[InventoryDoc]:
     clause, params = scopes.sql_filter("d")
     rows = db.execute(text(_ACTIVE_SQL.format(scope=clause)), params).all()
     docs = [InventoryDoc(r.standard_code, _clean_title(r.standard_code, r.title or r.original_filename),
-                         bool(r.is_verified_corpus)) for r in rows]
+                         bool(r.is_verified_corpus) and r.corpus_status == "verified",
+                         in_verified_area=bool(r.is_verified_corpus), corpus_status=r.corpus_status) for r in rows]
     docs.sort(key=lambda d: _natural_key(d.code, d.title))
     return docs
 
 
 def active_corpus_codes(db: Session, scopes: ScopeSet) -> list[str]:
     return [d.code for d in list_active_documents(db, scopes) if d.verified_corpus and d.code]
+
+
+def pending_corpus_codes(db: Session, scopes: ScopeSet) -> list[str]:
+    """Codes loaded in a verified-corpus area whose active version is not (yet) approved."""
+    return [d.code for d in list_active_documents(db, scopes) if d.in_verified_area and not d.verified_corpus and d.code]
 
 
 def requested_codes(question: str) -> list[tuple[str, str]]:
@@ -84,12 +95,17 @@ def missing_codes(question: str, available: list[str]) -> tuple[list[str], list[
 
 def format_inventory(docs: list[InventoryDoc], max_other: int = 25) -> str:
     verified = [d for d in docs if d.verified_corpus]
-    other = [d for d in docs if not d.verified_corpus]
+    pending = [d for d in docs if d.in_verified_area and not d.verified_corpus]
+    other = [d for d in docs if not d.in_verified_area and not d.verified_corpus]
     lines = [f"Doğrulanmış ISO korpusunda (iso booklets) {len(verified)} etkin belge var:"]
     if not verified:
-        lines = ["Doğrulanmış ISO korpusunda henüz etkin belge yok. 'iso booklets' klasörüne PDF ekleyin."]
+        lines = ["Doğrulanmış ISO korpusunda henüz onaylanmış belge yok."]
     for d in verified:
         lines.append(f"- {d.code or '(kod yok)'} — {d.title}")
+    if pending:
+        lines += ["", f"Yüklü ama henüz doğrulanmış korpusa alınmamış {len(pending)} belge (kaynak olarak kullanılmaz):"]
+        for d in pending:
+            lines.append(f"- {d.code or '(kod yok)'} — {d.title} ({CORPUS_STATUS_TR.get(d.corpus_status or '', d.corpus_status)})")
     if other:
         lines += ["", f"Arşivdeki diğer {len(other)} belge (ekler/yüklemeler; doğrulanmış kaynak değildir):"]
         for d in other[:max_other]:

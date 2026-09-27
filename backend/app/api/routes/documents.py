@@ -12,12 +12,13 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.api.deps import current_user, db_dep, deny, require_owner, scopes_dep, settings_dep
-from app.api.schemas import DeleteIn, DocumentListOut, DocumentOut
+from app.api.schemas import CorpusNoteIn, DeleteIn, DocumentListOut, DocumentOut
 from app.core.config import Settings
 from app.core.paths import fs, safe_join
 from app.db.models import (
     ArchiveMember,
     Document,
+    DocumentChunk,
     DocumentPage,
     DocumentRelationship,
     DocumentVersion,
@@ -27,7 +28,7 @@ from app.db.models import (
 from app.ingestion.extractors.pdf import render_page_png
 from app.ingestion.pipeline import mark_document_deleted, queue_reindex, register_upload
 from app.ingestion.storage import Storage
-from app.services import audit
+from app.services import audit, corpus
 from app.services.access import ScopeSet, can_view_document
 from app.services.auth import AuthenticatedUser
 
@@ -51,6 +52,9 @@ def version_dict(v: DocumentVersion) -> dict:
         "created_at": v.created_at.isoformat(), "ingested_at": v.ingested_at.isoformat() if v.ingested_at else None,
         "superseded_at": v.superseded_at.isoformat() if v.superseded_at else None,
         "source_mtime": v.source_mtime.isoformat() if v.source_mtime else None,
+        "corpus_status": v.corpus_status, "parser": v.parser, "parser_version": v.parser_version,
+        "quality_report": v.quality_report or {}, "verified_at": v.verified_at.isoformat() if v.verified_at else None,
+        "review_note": v.review_note,
     }
 
 
@@ -317,6 +321,61 @@ def reindex_document(doc_id: str, request: Request, user: AuthenticatedUser = De
     if worker:
         worker.wake()
     return {"queued": job is not None, "document": doc_dict(db, d)}
+
+
+# ----------------------------------------------------------------------------
+# verified-corpus lifecycle (owner only; see app/services/corpus.py)
+def _corpus_action(doc_id: str, user: AuthenticatedUser, db: Session, action, note: str | None) -> dict:
+    d = db.get(Document, _uuid(doc_id))
+    if d is None or d.current_version_id is None:
+        raise HTTPException(404, "Belge veya etkin sürüm bulunamadı.")
+    reviewer = corpus.Reviewer(user.id, user.username, session_actor=user.actor)
+    try:
+        action(db, d.current_version_id, reviewer, note)
+    except corpus.CorpusError as exc:
+        raise HTTPException(409, str(exc)) from exc
+    db.commit()
+    return doc_dict(db, d)
+
+
+@router.post("/documents/{doc_id}/corpus/approve", summary="Etkin sürümü doğrulanmış korpusa al (sahip)")
+def corpus_approve(doc_id: str, body: CorpusNoteIn, user: AuthenticatedUser = Depends(require_owner),
+                   db: Session = Depends(db_dep)) -> dict:
+    return _corpus_action(doc_id, user, db, corpus.approve, body.note)
+
+
+@router.post("/documents/{doc_id}/corpus/revoke", summary="Doğrulamayı geri al (sahip, gerekçe zorunlu)")
+def corpus_revoke(doc_id: str, body: CorpusNoteIn, user: AuthenticatedUser = Depends(require_owner),
+                  db: Session = Depends(db_dep)) -> dict:
+    return _corpus_action(doc_id, user, db, corpus.revoke, body.note or "")
+
+
+@router.post("/documents/{doc_id}/corpus/reject", summary="Çıkarımı reddet: korpusa alınamaz (sahip)")
+def corpus_reject(doc_id: str, body: CorpusNoteIn, user: AuthenticatedUser = Depends(require_owner),
+                  db: Session = Depends(db_dep)) -> dict:
+    return _corpus_action(doc_id, user, db, corpus.reject, body.note or "")
+
+
+@router.get("/corpus/status", summary="Korpus durumu ve kalite kapıları (sahip)")
+def corpus_status(user: AuthenticatedUser = Depends(require_owner), db: Session = Depends(db_dep)) -> dict:
+    return {"items": corpus.status_rows(db)}
+
+
+@router.get("/documents/{doc_id}/versions/{vid}/chunks", summary="Parça soy ağacı (sayfa, madde, tür, özet)")
+def version_chunks(doc_id: str, vid: str, request: Request, user: AuthenticatedUser = Depends(current_user),
+                   scopes: ScopeSet = Depends(scopes_dep), db: Session = Depends(db_dep),
+                   limit: int = Query(200, ge=1, le=2000), offset: int = Query(0, ge=0)) -> dict:
+    d = _get_doc(db, doc_id, user, scopes, request)
+    v = _get_version(db, d, vid)
+    rows = db.execute(select(DocumentChunk).where(DocumentChunk.version_id == v.id)
+                      .order_by(DocumentChunk.chunk_index).limit(limit).offset(offset)).scalars().all()
+    return {"items": [{
+        "id": str(c.id), "chunk_index": c.chunk_index, "page_id": str(c.page_id) if c.page_id else None,
+        "page_start": c.page_start, "page_end": c.page_end, "clause": c.clause, "heading": c.heading,
+        "content_type": c.content_type, "standard_code": c.standard_code, "extraction_method": c.extraction_method,
+        "confidence_status": c.confidence_status, "extraction_confidence": c.extraction_confidence,
+        "source_hash": c.source_hash, "content_hash": c.content_hash, "parser": c.parser,
+        "parser_version": c.parser_version, "preview": c.text[:240]} for c in rows]}
 
 
 # ----------------------------------------------------------------------------

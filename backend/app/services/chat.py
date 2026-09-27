@@ -34,7 +34,14 @@ from app.db.models import (
 from app.db.session import session_scope
 from app.domain.enums import REFUSAL_PHRASE
 from app.inference.base import ChatMessage, GenerationOptions, LLMProvider, ProviderError
-from app.inference.prompts import CODE_RULE, RANGE_RULE, general_messages, summary_messages, verified_messages
+from app.inference.prompts import (
+    CODE_RULE,
+    FORMULA_RULE,
+    RANGE_RULE,
+    general_messages,
+    summary_messages,
+    verified_messages,
+)
 from app.services import audit, memory
 from app.services.access import can_view_document, load_scopes
 from app.services.auth import AuthenticatedUser
@@ -50,7 +57,13 @@ from app.services.calculations import (
 from app.services.glossary import annotate_first_use
 from app.services.grounding import validate_answer
 from app.services.intent import Intent, classify
-from app.services.inventory import active_corpus_codes, format_inventory, list_active_documents, missing_codes
+from app.services.inventory import (
+    active_corpus_codes,
+    format_inventory,
+    list_active_documents,
+    missing_codes,
+    pending_corpus_codes,
+)
 from app.services.notes import NotesService
 from app.services.retrieval import Passage, label_lines, plan_query, search
 from app.services.serialize import message_to_dict
@@ -62,7 +75,7 @@ NEW_TITLE = "Yeni sohbet"
 # Structured refusal reasons (metadata.refusal.reason). The message content of
 # every refusal remains exactly REFUSAL_PHRASE (master spec §1 rule 3).
 REFUSAL_REASONS = ("no_passages", "low_relevance", "unsupported_numbers", "model_refused", "invalid_citation",
-                   "empty_answer", "unsupported_calculation", "calculation_refused")
+                   "empty_answer", "unsupported_calculation", "calculation_refused", "document_not_verified")
 
 
 _PARAPHRASED_REFUSAL = re.compile(
@@ -274,11 +287,17 @@ class ChatService:
     # ------------------------------------------------------------------
     def _refusal_meta(self, user, question: str, reason: str, available_codes: list[str] | None = None) -> dict:
         """Structured, non-content refusal detail (Step 2 Order B). Content stays REFUSAL_PHRASE."""
-        if available_codes is None:
-            with session_scope() as db:
-                available_codes = active_corpus_codes(db, load_scopes(db, user))
+        with session_scope() as db:
+            scopes = load_scopes(db, user)
+            if available_codes is None:
+                available_codes = active_corpus_codes(db, scopes)
+            pending = pending_corpus_codes(db, scopes)
         requested, missing = missing_codes(question, available_codes)
-        return {"reason": normalize_refusal_reason(reason), "codes_requested": requested, "codes_missing": missing}
+        # requested standards that are loaded but not (yet) approved for the verified corpus
+        _req, not_pending = missing_codes(question, pending)
+        unverified = [c for c in missing if c not in not_pending]
+        return {"reason": normalize_refusal_reason(reason), "codes_requested": requested,
+                "codes_missing": [c for c in missing if c not in unverified], "codes_unverified": unverified}
 
     def _refuse(self, conversation_id, user, user_msg_id, reason: str, details: dict | None = None, *,
                 question: str = "", available_codes: list[str] | None = None, event: str = "answer.refused",
@@ -383,12 +402,15 @@ class ChatService:
         with session_scope() as db:
             scopes = load_scopes(db, user)
             available = active_corpus_codes(db, scopes)
-        # Order C.1: every ISO code the question names is absent -> refuse now (no retrieval, no LLM)
+        # Order C.1: every ISO code the question names is absent -> refuse now (no retrieval, no LLM).
+        # A standard that is loaded but not approved yet is "document_not_verified", not "no_passages".
         requested, missing = missing_codes(intent.question, available)
         if requested and len(missing) == len(requested):
             timings.update(retrieval=0, total=ms(t_start))
+            refusal = self._refusal_meta(user, intent.question, "no_passages", available)
+            reason = "document_not_verified" if refusal["codes_unverified"] else "no_passages"
             yield {"event": "assistant_message",
-                   "data": self._refuse(conversation_id, user, user_msg_id, "no_passages",
+                   "data": self._refuse(conversation_id, user, user_msg_id, reason,
                                         {"short_circuit": "codes_missing", "timings_ms": timings},
                                         question=intent.question, available_codes=available)}
             return
@@ -397,13 +419,16 @@ class ChatService:
         with session_scope() as db:
             scopes = load_scopes(db, user)
             plan = plan_query(intent.question)
-            passages = search(db, scopes, plan, top_k=self.settings.retrieval_top_k, min_coverage=min_cov)
+            passages = search(db, scopes, plan, top_k=self.settings.retrieval_top_k, min_coverage=min_cov,
+                              subtype=intent.subtype)
             if not passages and prev_q:
                 plan = plan_query(intent.question, context=prev_q)
-                passages = search(db, scopes, plan, top_k=self.settings.retrieval_top_k, min_coverage=min_cov)
+                passages = search(db, scopes, plan, top_k=self.settings.retrieval_top_k, min_coverage=min_cov,
+                                  subtype=intent.subtype)
         timings["retrieval"] = ms(t0)
         plan_info = {"concepts": plan.concepts, "codes": plan.codes, "literals": plan.literals,
-                     "symbols": plan.symbols, "labels": plan.labels, "intent_subtype": intent.subtype}
+                     "symbols": plan.symbols, "labels": plan.labels, "clauses": plan.clauses,
+                     "equations": plan.equations, "intent_subtype": intent.subtype}
         if not passages:
             timings["total"] = ms(t_start)
             yield {"event": "assistant_message",
@@ -432,7 +457,9 @@ class ChatService:
             used.append(p)
             total += len(p.text)
         yield {"event": "status", "data": {"stage": "generation", "text": "Yerel model kaynaklara dayalı yanıt hazırlıyor…"}}
-        pdicts = [{"standard_code": p.standard_code, "title": p.document_title, "locator": p.locator, "text": p.text}
+        # the clause/heading lineage tells the model which clause, table or equation a passage belongs to
+        pdicts = [{"standard_code": p.standard_code, "title": p.document_title, "text": p.text,
+                   "locator": f"{p.locator} — {p.heading}" if p.heading else p.locator}
                   for p in used]
         t0 = time.perf_counter()
         extra_rules = []
@@ -440,6 +467,8 @@ class ChatService:
             extra_rules.append(CODE_RULE)
         if intent.subtype == "standards_range_lookup":  # all rows of the entity, not the first one
             extra_rules.append(RANGE_RULE)
+        if intent.subtype == "standards_formula_lookup":  # quote the relation; never rebuild or compute it
+            extra_rules.append(FORMULA_RULE)
         try:
             res = self.provider.chat(
                 _msgs(verified_messages(intent.question, pdicts, intent.wants_detail,
@@ -454,14 +483,15 @@ class ChatService:
         timings["generation"] = ms(t0)
         yield {"event": "status", "data": {"stage": "validation", "text": "Yanıt kaynak pasajlarına göre doğrulanıyor…"}}
         t0 = time.perf_counter()
-        extra = [f"{p.standard_code or ''} {p.document_title} {p.locator}" for p in used]
+        extra = [f"{p.standard_code or ''} {p.document_title} {p.locator} {p.heading or ''}" for p in used]
         g = validate_answer(res.content, [p.text for p in used], intent.question, extra_allowed=extra)
         if g.accepted and looks_like_refusal(g.text):
             g.accepted, g.text, g.reason = False, REFUSAL_PHRASE, "model_refused"
         timings["validation"] = ms(t0)
         timings["total"] = ms(t_start)
         retrieved_meta = [{"chunk_id": str(p.chunk_id), "document_id": str(p.document_id), "version_id": str(p.version_id),
-                           "page": p.page_number, "score": p.score} for p in used]
+                           "page": p.page_number, "score": p.score, "clause": p.clause, "content_type": p.content_type,
+                           "channels": p.channels, "fused": p.fused, "boosts": p.boosts} for p in used]
         if not g.accepted:
             payload = self._refuse(conversation_id, user, user_msg_id, g.reason or "model_refused",
                                    {"retrieved": retrieved_meta, "plan": plan_info,

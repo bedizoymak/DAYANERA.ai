@@ -17,9 +17,15 @@ from app.calc.types import EvidenceMatch, EvidenceRequirement
 _SPACE_RE = re.compile(r"[\s  -​  　﻿]+")
 
 
+# Greek letters folded to their Symbol-font code positions (α -> a, ρ -> r) on both sides, so
+# phrases match text layers with and without Symbol-font recovery (app/ingestion/parsing/symbols.py).
+# μ is excluded: casefold() turns the micro sign of "µm" into μ, which must never become "mm".
+_GREEK_FOLD = str.maketrans("αβχδεφγηιϕκλνοπθρστυϖωξψζ", "abcdefghijklnopqrstuvwxyz")
+
+
 def norm_text(s: str) -> str:
     s = s.replace("‐", "-").replace("‑", "-").replace("­", "-")
-    return _SPACE_RE.sub(" ", s).strip().casefold()
+    return _SPACE_RE.sub(" ", s).strip().casefold().translate(_GREEK_FOLD)
 
 
 class EvidenceResolver(Protocol):

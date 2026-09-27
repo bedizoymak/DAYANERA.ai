@@ -15,13 +15,13 @@ from synthetic_corpus import write_all
 
 @pytest.fixture(scope="module")
 def calc_corpus(settings, admin):
-    from app.ingestion.jobs import run_pending
+    from conftest import run_jobs
     from app.ingestion.watcher import Watcher
 
     write_all(settings.iso_booklets_path / "calc")
     time.sleep(2.1)
     Watcher(settings).scan()
-    run_pending(settings)
+    run_jobs(settings)
     types = {t["calc_type"]: t for t in admin.get("/calculations/types").json()}
     missing = {k: [r for r, ok in v["evidence_available"].items() if not ok] for k, v in types.items()}
     assert all(t["available"] for t in types.values()), missing
@@ -68,7 +68,7 @@ def test_chat_calculation_mismatch_is_shown_and_audited(admin, fake_llm, calc_co
     a = admin.post(f"/conversations/{conv}/messages", {"content": "z=20, m=2 mm dişli geometrisini hesapla"}).json()["assistant_message"]
     assert a["answer_mode"] == "calculation" and a["answer_mode_label"] == "Hesap sonucu"
     assert a["metadata"]["mismatch"] is True
-    assert "UYUŞMADI" in a["content"] and "**44 mm**" in a["content"]  # engine value shown, not Qwen's 46
+    assert "UYUŞMADI" in a["content"] and "44" in a["content"] and "46" not in a["content"]  # engine value shown, not Qwen's 46
     detail = admin.get(f"/messages/{a['id']}/calculation").json()
     bad = [i for i in detail["comparison"]["items"] if i["status"] == "mismatch"]
     assert [i["key"] for i in bad] == ["d_a"]
@@ -96,7 +96,7 @@ def test_calculation_works_without_llm(admin, fake_llm, calc_corpus):
     fake_llm.fail_with = ProviderUnavailableError("down")
     conv = admin.post("/conversations", {}).json()["id"]
     a = admin.post(f"/conversations/{conv}/messages", {"content": "z=25, m=3 mm hesapla"}).json()["assistant_message"]
-    assert a["answer_mode"] == "calculation" and "**75 mm**" in a["content"]
+    assert a["answer_mode"] == "calculation" and "75" in a["content"] and r"\mathrm{mm}" in a["content"]
     assert "Qwen taslağı alınamadı" in a["content"]
 
 
@@ -173,8 +173,8 @@ def test_calculation_refused_when_source_document_deleted(admin, calc_corpus):
     # owner restore brings it back after re-indexing
     for doc in docs:
         assert admin.post(f"/documents/{doc['id']}/restore").status_code == 200
-    from app.ingestion.jobs import run_pending
+    from conftest import run_jobs
     from app.core.config import get_settings
 
-    run_pending(get_settings())
+    run_jobs(get_settings())
     assert admin.post("/calculations", body).json()["status"] == "ok"

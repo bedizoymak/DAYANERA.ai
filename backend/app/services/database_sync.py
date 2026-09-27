@@ -42,6 +42,12 @@ class SyncError(RuntimeError):
     """Only static, non-sensitive error codes may leave the sync layer."""
 
 
+def migration_files() -> list:
+    """Forward migration SQL files in order (``*.down.sql`` reverts are excluded)."""
+    folder = REPO_ROOT / "database" / "migrations" / "sql"
+    return sorted(p for p in folder.glob("[0-9][0-9][0-9][0-9]_*.sql") if not p.name.endswith(".down.sql"))
+
+
 def digest(value: Any) -> str:
     return hashlib.sha256(json.dumps(value, sort_keys=True, ensure_ascii=False,
                                     separators=(",", ":")).encode()).hexdigest()
@@ -137,7 +143,8 @@ def initialize(local_dsn: str, cloud_dsn: str):
         else:
             remote.execute("CREATE SCHEMA dayanera")
             remote.execute("SET LOCAL search_path=dayanera,pg_catalog")
-            remote.execute((REPO_ROOT / "database/migrations/sql/0001_initial.sql").read_text(encoding="utf-8"))
+            for migration in migration_files():  # same schema as the local database (0001, 0002, ...)
+                remote.execute(migration.read_text(encoding="utf-8"))
             remote.execute("CREATE TABLE dayanera._sync_pair(pair_id uuid PRIMARY KEY)")
             remote.execute("INSERT INTO dayanera._sync_pair VALUES(%s)", (pair,))
         _defer_foreign_keys(remote, REMOTE_SCHEMA)

@@ -84,6 +84,16 @@ export interface VersionInfo {
   ingested_at: string | null;
   superseded_at: string | null;
   source_mtime: string | null;
+  // verified-corpus lifecycle: candidate | extracted | needs_review | verified | failed
+  corpus_status?: string;
+  parser?: string | null;
+  parser_version?: string | null;
+  review_note?: string | null;
+  verified_at?: string | null;
+  quality_report?: {
+    outcome?: string;
+    gates?: Array<{ id: string; status: string; detail?: string; pages?: number[] }>;
+  };
 }
 
 export interface DocumentInfo {
@@ -170,6 +180,9 @@ export interface CalcOutputValue {
   expression: string;
   display: string;
   unrounded: number | null;
+  formula_latex?: string | null;
+  substitution_latex?: string | null;
+  result_latex?: string | null;
 }
 
 export interface CalcResult {
@@ -196,6 +209,7 @@ export interface CalcResult {
   }>;
   diagnostics: Array<{ level: string; code: string; message: string }>;
   trace: string[];
+  trace_latex?: string[];
 }
 
 export interface Calculation {

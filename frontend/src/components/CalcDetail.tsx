@@ -1,9 +1,23 @@
 import type { Calculation } from '../api/types';
+import MathMarkdown from './MathMarkdown';
 
 function fmt(v: unknown): string {
   if (typeof v === 'number') return Number.isInteger(v) ? String(v) : v.toFixed(4).replace(/0+$/, '').replace(/\.$/, '');
   if (v === null || v === undefined) return '—';
   return String(v);
+}
+
+function displayLabel(label: string, key: string): string {
+  let text = label.replace(/\s*\([^)]*\)/g, '').trim();
+  const aliases: Record<string, string[]> = {
+    alpha_t: ['alpha_t', 'α_t'],
+    alpha_wt: ['alpha_wt', 'α_wt'],
+  };
+  for (const symbol of [key, ...(aliases[key] ?? [])]) {
+    const escaped = symbol.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    text = text.replace(new RegExp(`\\s${escaped}(?=\\s|$)`, 'g'), '');
+  }
+  return text.trim();
 }
 
 /** "Ayrıntılı çözüm": inputs, formulas, units, source identifiers and validation trace. */
@@ -66,11 +80,18 @@ export default function CalcDetail({ calc }: { calc: Calculation }) {
             <tbody>
               {r.outputs.map((o) => (
                 <tr key={o.key}>
-                  <td>{o.label}</td>
-                  <td><code>{o.expression}</code></td>
+                  <td>{displayLabel(o.label, o.key)}</td>
+                  <td>
+                    {o.formula_latex ? (
+                      <>
+                        <MathMarkdown latex={o.formula_latex} display />
+                        {o.substitution_latex && <MathMarkdown latex={o.substitution_latex} display />}
+                      </>
+                    ) : <code>{o.expression}</code>}
+                  </td>
                   <td>{o.formula_id}</td>
                   <td>
-                    <strong>{o.display}</strong>
+                    {o.result_latex ? <MathMarkdown latex={o.result_latex} /> : <strong>{o.display}</strong>}
                     {o.unrounded !== null && o.unrounded !== undefined && (
                       <span className="muted small"> (yuvarlanmamış {fmt(o.unrounded)})</span>
                     )}
@@ -81,12 +102,16 @@ export default function CalcDetail({ calc }: { calc: Calculation }) {
           </table>
         </>
       )}
-      {r.trace?.length > 0 && (
+      {(r.trace_latex?.length || r.trace?.length) ? (
         <>
           <h5>Adım adım çözüm</h5>
-          <ol className="trace">{r.trace.map((t, i) => <li key={i}><code>{t}</code></li>)}</ol>
+          <ol className="trace">
+            {(r.trace_latex?.length ? r.trace_latex : r.trace).map((t, i) => (
+              <li key={i}>{r.trace_latex?.length ? <MathMarkdown latex={t} display /> : <code>{t}</code>}</li>
+            ))}
+          </ol>
         </>
-      )}
+      ) : null}
       {r.evidence?.length > 0 && (
         <>
           <h5>Kaynak tanımlayıcıları</h5>

@@ -160,6 +160,10 @@ class DeleteIn(BaseModel):
     reason: str = Field(default="Kullanıcı tarafından silindi", max_length=500)
 
 
+class CorpusNoteIn(BaseModel):
+    note: str | None = Field(default=None, max_length=2000)
+
+
 # --- extraction review -----------------------------------------------------
 class ConfirmValueIn(BaseModel):
     value: float | None = None

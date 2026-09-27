@@ -36,6 +36,8 @@ _PATTERNS: dict[str, list[re.Pattern]] = {
     "beta": [re.compile(r"(?:β|\bbeta|helis\s*açısı|helix\s*angle)\s*(?:[=:]|olan|ise)?\s*" + NUM + UNIT, I)],
     "x": [re.compile(r"(?:\bx\s*[=:]\s*|profil\s*kaydırma(?:\s*katsayısı)?\s*(?:[=:]|olan|ise)?\s*)" + NUM, I)],
     "k": [re.compile(r"\bk\s*[=:]\s*" + NUM, I)],
+    "h_aP_star": [re.compile(r"h\s*_?\s*a\s*P(?:\s*_?\s*star|\s*\*)?\s*[=:]\s*" + NUM, I)],
+    "h_fP_star": [re.compile(r"h\s*_?\s*f\s*P(?:\s*_?\s*star|\s*\*)?\s*[=:]\s*" + NUM, I)],
     "b": [re.compile(
         r"(?:\bb\s*[=:]\s*|diş\s*genişliği\s*(?:[=:]|olan|ise)?\s*|face\s*width\s*[=:]?\s*|facewidth\s*[=:]?\s*)"
         + NUM + UNIT, I)],
@@ -64,7 +66,8 @@ TABLE_LOOKUPS = {"iso286_it_tolerance", "iso286_hole_H", "iso286_shaft_h"}
 
 _KIND = {
     "z": "integer", "z1": "integer", "z2": "integer", "m_n": "length", "alpha_n": "angle", "beta": "angle",
-    "x": "dimensionless", "k": "dimensionless", "b": "length", "d": "length", "a_w": "length",
+    "x": "dimensionless", "k": "dimensionless", "h_aP_star": "dimensionless", "h_fP_star": "dimensionless",
+    "b": "length", "d": "length", "a_w": "length",
     "A": "grade", "grade": "grade", "nominal_size": "length",
 }
 _DEFAULT_UNIT = {"length": "mm", "angle": "°", "integer": "", "dimensionless": "", "grade": ""}

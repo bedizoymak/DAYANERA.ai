@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
+import rehypeKatex from 'rehype-katex';
+import remarkMath from 'remark-math';
 import { api } from '../api/client';
 import type { Calculation, Message } from '../api/types';
 import CalcDetail from './CalcDetail';
@@ -10,11 +12,15 @@ interface Refusal {
   reason?: string;
   codes_requested?: string[];
   codes_missing?: string[];
+  codes_unverified?: string[];
 }
 
 /** Muted explanation shown under a refusal; never part of the (exact) refusal content. */
 export function refusalHint(refusal: Refusal | undefined): string | null {
   if (!refusal) return null;
+  if (refusal.codes_unverified && refusal.codes_unverified.length > 0) {
+    return `İstenen standart yüklü ama henüz doğrulanmış korpusa alınmadı (inceleme/onay bekliyor): ${refusal.codes_unverified.join(', ')}.`;
+  }
   if (refusal.codes_missing && refusal.codes_missing.length > 0) {
     return `İstenen standart yüklü değil: ${refusal.codes_missing.join(', ')}. "hangi standartlar var" yazarak listeyi görebilirsiniz.`;
   }
@@ -91,7 +97,16 @@ export default function MessageView({ message, onRequestSources, busy }: Props) 
         </ul>
       )}
       <div className="msg-body">
-        {isUser ? <p className="pre">{message.content}</p> : <ReactMarkdown disallowedElements={['img']} unwrapDisallowed>{message.content}</ReactMarkdown>}
+        {isUser ? <p className="pre">{message.content}</p> : (
+          <ReactMarkdown
+            remarkPlugins={[remarkMath]}
+            rehypePlugins={[[rehypeKatex, { throwOnError: false, errorColor: 'inherit' }]]}
+            disallowedElements={['img', 'script', 'iframe', 'style']}
+            unwrapDisallowed
+          >
+            {message.content}
+          </ReactMarkdown>
+        )}
       </div>
       {!isUser && hint && (
         <p className="refusal-hint muted small" data-testid="refusal-hint">{hint}</p>

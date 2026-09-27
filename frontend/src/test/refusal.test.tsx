@@ -29,6 +29,11 @@ describe('Ret açıklaması (Step 2 Order B)', () => {
     expect(refusalHint(undefined)).toBeNull();
   });
 
+  it('yüklü ama onaylanmamış standardı ayrı açıklar', () => {
+    expect(refusalHint({ reason: 'document_not_verified', codes_missing: [], codes_unverified: ['ISO 54'] })).toBe(
+      'İstenen standart yüklü ama henüz doğrulanmış korpusa alınmadı (inceleme/onay bekliyor): ISO 54.');
+  });
+
   it('ret olmayan yanıtta ipucu göstermez; envanter yanıtında "Sistem bilgisi" çipi vardır', () => {
     renderMsg({ content: '- ISO 53:1998 — Cylindrical gears', answer_mode: 'general', metadata: { kind: 'corpus_inventory' } });
     expect(screen.queryByTestId('refusal-hint')).not.toBeInTheDocument();

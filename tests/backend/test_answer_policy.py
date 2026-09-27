@@ -15,12 +15,12 @@ from conftest import audit_rows, make_pdf
 
 
 def _scan_and_process(settings):
-    from app.ingestion.jobs import run_pending
+    from conftest import run_jobs
     from app.ingestion.watcher import Watcher
 
     time.sleep(2.1)
     Watcher(settings).scan()
-    run_pending(settings)
+    run_jobs(settings)
 
 
 def _grounded_responder(template: str):

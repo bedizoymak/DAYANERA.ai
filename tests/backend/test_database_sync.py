@@ -6,7 +6,7 @@ from dataclasses import dataclass
 
 import psycopg
 import pytest
-from app.core.config import REPO_ROOT, Settings
+from app.core.config import Settings
 from app.services import database_sync as sync
 from conftest import BASE_DB_URL
 from psycopg import sql
@@ -30,7 +30,8 @@ def pair():
     dsns = [psycopg.conninfo.make_conninfo(**(args | {"dbname": name})) for name in names]
     try:
         with sync.connect(dsns[0]) as conn:
-            conn.execute((REPO_ROOT / "database/migrations/sql/0001_initial.sql").read_text(encoding="utf-8"))
+            for migration in sync.migration_files():
+                conn.execute(migration.read_text(encoding="utf-8"))
         sync.initialize(*dsns)
         yield Pair(*dsns)
     finally:

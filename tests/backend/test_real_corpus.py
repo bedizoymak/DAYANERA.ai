@@ -39,12 +39,12 @@ def real_corpus(settings, admin):
                 copied += 1
     if copied < len(WANTED):
         pytest.skip("Gerekli ISO PDF'lerinden bazıları eksik")
-    from app.ingestion.jobs import run_pending
+    from conftest import run_jobs
     from app.ingestion.watcher import Watcher
 
     time.sleep(2.1)
     Watcher(settings).scan()
-    run_pending(settings)
+    run_jobs(settings)
     yield {d["standard_code"]: d for d in admin.get("/documents?limit=500").json()["items"] if d["standard_code"]}
 
 

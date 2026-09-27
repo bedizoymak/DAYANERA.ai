@@ -36,6 +36,7 @@ JOIN knowledge_areas ka ON ka.id = d.knowledge_area_id
 WHERE ka.is_verified_corpus = true
   AND d.status = 'active'
   AND v.is_active = true AND v.state = 'active' AND v.ingestion_status = 'indexed'
+  AND v.corpus_status = 'verified'
   AND p.confidence_status IN ('verified_source', 'user_confirmed')
   AND d.standard_code ~* :code_re
   AND {scope}
@@ -43,7 +44,8 @@ WHERE ka.is_verified_corpus = true
 
 
 class DbEvidenceResolver:
-    """Resolves evidence only from active, indexed, verified pages within the user's scope."""
+    """Resolves evidence only from active, indexed, owner-approved (corpus_status verified)
+    versions and verified / user-confirmed pages within the user's scope."""
 
     def __init__(self, db: Session, scopes: ScopeSet):
         self.db = db
@@ -220,10 +222,18 @@ def format_result_text(result: CalcResult, comparison: dict[str, Any]) -> str:
         return f"Hesap yapılmadı: {msgs}"
     lines = [f"**{RULES[result.calc_type].title}** — deterministik hesap motoru sonucu:"]
     for o in result.outputs:
-        lines.append(f"- {o.label}: **{o.display}**")
+        label = _display_label(o.label, o.key)
+        if o.result_latex:
+            equation = o.result_latex
+            if o.formula_latex and o.substitution_latex:
+                equation = f"{o.formula_latex} \\;=\\; {_rhs_for_markdown(o.substitution_latex)} \\;=\\; {_rhs_for_markdown(o.result_latex)}"
+            lines.append(f"- {label}: $${equation}$$")
+        else:
+            lines.append(f"- {o.label}: **{o.display}**")
     if len(result.outputs) == 1:  # focused single-formula rules: show the relation next to the value
         o = result.outputs[0]
-        lines.append(f"- Bağıntı ({o.formula_id}): {result.trace[-1] if result.trace else o.expression}")
+        relation = o.formula_latex or o.expression
+        lines.append(f"- Bağıntı ({o.formula_id}): $${relation}$$")
     if comparison.get("performed"):
         if comparison.get("mismatch"):
             lines.append("")
@@ -238,3 +248,15 @@ def format_result_text(result: CalcResult, comparison: dict[str, Any]) -> str:
     lines.append("")
     lines.append("Ayrıntılar (girdiler, formüller, birimler, kaynaklar) için 'Ayrıntılı çözüm'ü açın.")
     return "\n".join(lines)
+
+
+def _rhs_for_markdown(equation: str) -> str:
+    return equation.split("=", 1)[1].strip() if "=" in equation else equation
+
+
+def _display_label(label: str, key: str) -> str:
+    text = re.sub(r"\s*\([^)]*\)", "", label).strip()
+    aliases = {"alpha_t": ("alpha_t", "α_t"), "alpha_wt": ("alpha_wt", "α_wt")}
+    for symbol in (key, *aliases.get(key, ())):
+        text = re.sub(rf"\s+{re.escape(symbol)}(?=\s|$)", "", text)
+    return text

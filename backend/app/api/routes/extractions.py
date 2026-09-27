@@ -179,16 +179,27 @@ def get_page(page_id: str, request: Request, user: AuthenticatedUser = Depends(c
 
 
 def _rebuild_page_chunks(db: Session, p: DocumentPage, status: str) -> None:
-    old = db.execute(select(DocumentChunk).where(DocumentChunk.page_id == p.id)).scalars().all()
+    old = db.execute(select(DocumentChunk).where(DocumentChunk.page_id == p.id)
+                     .order_by(DocumentChunk.chunk_index)).scalars().all()
     method = old[0].extraction_method if old else p.extraction_method
+    first = old[0] if old else None
+    ver = db.get(DocumentVersion, p.version_id)
+    doc = db.get(Document, p.document_id)
     db.execute(delete(DocumentChunk).where(DocumentChunk.page_id == p.id))
     db.flush()
     base = db.execute(select(func.coalesce(func.max(DocumentChunk.chunk_index), -1))
                       .where(DocumentChunk.version_id == p.version_id)).scalar() + 1
     for i, ch in enumerate(chunk_page(p.page_number, p.locator, p.text)):
+        # lineage: the clause context of the page's previous chunks is kept; the text is now person-confirmed
         db.add(DocumentChunk(document_id=p.document_id, version_id=p.version_id, page_id=p.id, chunk_index=base + i,
                              page_number=p.page_number, locator=p.locator, char_start=ch.char_start,
-                             char_end=ch.char_end, text=ch.text, extraction_method=method, confidence_status=status))
+                             char_end=ch.char_end, text=ch.text, extraction_method=method, confidence_status=status,
+                             page_start=p.page_number, page_end=p.page_number,
+                             clause=first.clause if first else None, heading=first.heading if first else None,
+                             content_type=first.content_type if first else "text", standard_code=doc.standard_code,
+                             extraction_confidence=None, source_hash=ver.sha256,
+                             content_hash=hashlib.sha256(ch.text.encode("utf-8")).hexdigest(),
+                             parser=p.parser, parser_version=p.parser_version))
 
 
 @router.post("/pages/{page_id}/confirm", summary="OCR/döküm sayfasını onayla (düzeltilmiş metinle)")

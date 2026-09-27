@@ -55,7 +55,10 @@ def corpus_status(db: Session) -> dict[str, Any]:
         SELECT count(*) FROM document_chunks c JOIN document_versions v ON v.id = c.version_id
         JOIN documents d ON d.id = c.document_id JOIN knowledge_areas ka ON ka.id = d.knowledge_area_id
         WHERE ka.is_verified_corpus AND d.status = 'active' AND v.is_active AND v.ingestion_status = 'indexed'
+          AND v.corpus_status = 'verified'
           AND c.confidence_status IN ('verified_source','user_confirmed')""")).scalar()
+    corpus = dict(db.execute(select(DocumentVersion.corpus_status, func.count())
+                             .where(DocumentVersion.is_active.is_(True)).group_by(DocumentVersion.corpus_status)).all())
     jobs = dict(db.execute(select(IngestionJob.status, func.count()).group_by(IngestionJob.status)).all())
     drafts = db.execute(select(func.count()).select_from(ExtractedValue)
                         .where(ExtractedValue.status == "draft_extraction")).scalar()
@@ -63,7 +66,7 @@ def corpus_status(db: Session) -> dict[str, Any]:
                         .join(DocumentVersion, DocumentVersion.document_id == Document.id)
                         .where(DocumentVersion.ingestion_status == "failed").limit(10)).all()
     return {
-        "areas": areas, "active_version_ingestion": ing, "pages_by_status": pages,
+        "areas": areas, "active_version_ingestion": ing, "active_version_corpus": corpus, "pages_by_status": pages,
         "verified_active_chunks": chunks_active, "jobs": jobs, "draft_values_pending": drafts,
         "failed": [{"title": t, "error": e} for t, e in failed],
         "empty_verified_corpus": (chunks_active or 0) == 0,

@@ -7,6 +7,10 @@ Commands:
   serve            run the API bound to APP_HOST:APP_PORT (loopback only)
   reindex          full manual rescan + reindex, processed synchronously
   export-openapi   write docs/openapi.json
+  corpus-status    lifecycle status and quality-gate findings of every active document
+  corpus-approve   --code "ISO 53" --by <owner_admin> [--note ...]   approve for the verified corpus
+  corpus-revoke    --code ... --by ... --note ...                     take out of the verified corpus
+  corpus-reject    --code ... --by ... --note ...                     mark the extraction as failed
 """
 from __future__ import annotations
 
@@ -119,17 +123,63 @@ def cmd_export_openapi() -> int:
     return 0
 
 
+def cmd_corpus_status() -> int:
+    from app.db.session import init_engine, session_scope
+    from app.services.corpus import status_rows
+
+    init_engine()
+    with session_scope() as db:
+        rows = status_rows(db)
+    for r in rows:
+        flags = ", ".join(f"{g['id']}:{g['status']}" for g in r["attention"]) or "-"
+        print(f"{(r['standard_code'] or r['title'])[:28]:28s} {r['area'] or '-':14s} {r['ingestion_status']:11s} "
+              f"{r['corpus_status']:12s} parça={r['chunks']:<4} {flags}")
+    return 0
+
+
+def cmd_corpus_action(action: str, code: str | None, by: str | None, note: str | None) -> int:
+    from app.db.session import init_engine, session_scope
+    from app.services import corpus
+
+    if not code or not by:
+        print("--code ve --by zorunludur (ör. --code \"ISO 53\" --by admin).", file=sys.stderr)
+        return 2
+    init_engine()
+    with session_scope() as db:
+        try:
+            reviewer = corpus.reviewer_by_username(db, by)
+            versions = corpus.find_versions(db, code)
+            if not versions:
+                raise corpus.CorpusError(f"Doğrulanmış korpus alanında etkin '{code}' belgesi yok.")
+            fn = {"approve": corpus.approve, "revoke": corpus.revoke, "reject": corpus.reject}[action]
+            for v in versions:
+                fn(db, v.id, reviewer, note if action == "approve" else (note or ""))
+                print(f"{action}: sürüm {v.id} -> {v.corpus_status}")
+        except corpus.CorpusError as exc:
+            db.rollback()
+            print(f"REDDEDİLDİ: {exc}", file=sys.stderr)
+            return 1
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="app.cli")
     p.add_argument("command", choices=["check-config", "migrate", "seed", "serve", "reindex", "export-openapi",
-                                       "sync-init", "sync-once", "sync-status"])
+                                       "sync-init", "sync-once", "sync-status", "corpus-status", "corpus-approve",
+                                       "corpus-revoke", "corpus-reject"])
+    p.add_argument("--code", help="standart kodu (ör. 'ISO 53', 'ISO 286-1:2010')")
+    p.add_argument("--by", help="onaylayan owner_admin kullanıcı adı")
+    p.add_argument("--note", help="inceleme notu / gerekçe")
     args = p.parse_args(argv)
     try:
         return {
             "check-config": cmd_check_config, "migrate": cmd_migrate, "seed": cmd_seed, "serve": cmd_serve,
             "reindex": cmd_reindex, "export-openapi": cmd_export_openapi,
             "sync-init": lambda: cmd_sync("init"), "sync-once": lambda: cmd_sync("once"),
-            "sync-status": lambda: cmd_sync("status"),
+            "sync-status": lambda: cmd_sync("status"), "corpus-status": cmd_corpus_status,
+            "corpus-approve": lambda: cmd_corpus_action("approve", args.code, args.by, args.note),
+            "corpus-revoke": lambda: cmd_corpus_action("revoke", args.code, args.by, args.note),
+            "corpus-reject": lambda: cmd_corpus_action("reject", args.code, args.by, args.note),
         }[args.command]()
     except ConfigError as exc:
         print(f"YAPILANDIRMA HATASI: {exc}", file=sys.stderr)

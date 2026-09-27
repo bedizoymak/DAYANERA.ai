@@ -280,10 +280,43 @@ def member_factory(admin, app):
     return make
 
 
-def run_jobs(settings) -> int:
+def approve_all(note: str = "test fixture: approved after the automated quality gates") -> list[str]:
+    """Approve every approvable active version of verified-corpus documents through the REAL
+    approval service (as the first active owner_admin). Returns the approved standard codes."""
+    from sqlalchemy import select
+
+    from app.db.models import Document, DocumentVersion, KnowledgeArea, User
+    from app.db.session import session_scope
+    from app.services import corpus
+
+    approved = []
+    with session_scope() as db:
+        owner = db.execute(select(User).where(User.role == "owner_admin", User.is_active.is_(True))
+                           .order_by(User.created_at)).scalars().first()
+        if owner is None:
+            return approved
+        reviewer = corpus.Reviewer(owner.id, owner.username)
+        rows = db.execute(
+            select(DocumentVersion, Document).join(Document, Document.current_version_id == DocumentVersion.id)
+            .join(KnowledgeArea, KnowledgeArea.id == Document.knowledge_area_id)
+            .where(KnowledgeArea.is_verified_corpus.is_(True), Document.status == "active",
+                   DocumentVersion.ingestion_status == "indexed",
+                   DocumentVersion.corpus_status.in_(corpus.APPROVABLE))).all()
+        for ver, doc in rows:
+            corpus.approve(db, ver.id, reviewer, note)
+            approved.append(doc.standard_code or doc.title)
+    return approved
+
+
+def run_jobs(settings, verify: bool = True) -> int:
+    """Process queued ingestion jobs; by default approve the results (see ``approve_all``).
+    Tests of the approval gate itself pass ``verify=False``."""
     from app.ingestion.jobs import run_pending
 
-    return run_pending(settings)
+    n = run_pending(settings)
+    if verify:
+        approve_all()
+    return n
 
 
 @pytest.fixture()

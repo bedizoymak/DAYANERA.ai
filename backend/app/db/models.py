@@ -1,4 +1,4 @@
-"""ORM models mirroring database/migrations/sql/0001_initial.sql.
+"""ORM models mirroring database/migrations/sql/0001_initial.sql and 0002_canonical_ingestion.sql.
 
 The SQL migration is authoritative; these mappings intentionally omit the
 generated ``tsv`` columns (full-text queries use explicit parameterized SQL).
@@ -134,6 +134,15 @@ class DocumentVersion(Base):
     created_at: Mapped[datetime] = _ts()
     ingested_at: Mapped[datetime | None] = _ts(nullable=True, default=False)
     superseded_at: Mapped[datetime | None] = _ts(nullable=True, default=False)
+    # verified-corpus lifecycle (0002): candidate | extracted | needs_review | verified | failed
+    corpus_status: Mapped[str] = mapped_column(Text, default="candidate")
+    quality_report: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
+    parser: Mapped[str | None] = mapped_column(Text, nullable=True)
+    parser_version: Mapped[str | None] = mapped_column(Text, nullable=True)
+    verified_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    verified_at: Mapped[datetime | None] = _ts(nullable=True, default=False)
+    verified_fingerprint: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    review_note: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
 class DocumentPage(Base):
@@ -151,6 +160,9 @@ class DocumentPage(Base):
     confirmed_at: Mapped[datetime | None] = _ts(nullable=True, default=False)
     review_note: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = _ts()
+    parser: Mapped[str | None] = mapped_column(Text, nullable=True)
+    parser_version: Mapped[str | None] = mapped_column(Text, nullable=True)
+    quality: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
 
 
 class DocumentChunk(Base):
@@ -168,6 +180,18 @@ class DocumentChunk(Base):
     extraction_method: Mapped[str] = mapped_column(Text)
     confidence_status: Mapped[str] = mapped_column(Text)
     created_at: Mapped[datetime] = _ts()
+    # lineage (0002)
+    page_start: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    page_end: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    clause: Mapped[str | None] = mapped_column(Text, nullable=True)
+    heading: Mapped[str | None] = mapped_column(Text, nullable=True)
+    content_type: Mapped[str] = mapped_column(Text, default="text")
+    standard_code: Mapped[str | None] = mapped_column(Text, nullable=True)
+    extraction_confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
+    source_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    content_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    parser: Mapped[str | None] = mapped_column(Text, nullable=True)
+    parser_version: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
 class ArchiveMember(Base):

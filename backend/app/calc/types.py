@@ -83,6 +83,10 @@ class OutputValue:
     display: str
     unrounded: float | None = None
     abs_tol: float | None = None  # Qwen-draft comparison: fixed absolute tolerance (no relative term)
+    # Optional presentation metadata. Numerical calculation remains in value.
+    formula_latex: str | None = None
+    substitution_latex: str | None = None
+    result_latex: str | None = None
 
 
 @dataclass
@@ -105,6 +109,7 @@ class CalcResult:
     evidence: list[dict[str, Any]] = field(default_factory=list)
     diagnostics: list[Diagnostic] = field(default_factory=list)
     trace: list[str] = field(default_factory=list)
+    trace_latex: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

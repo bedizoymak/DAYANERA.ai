@@ -101,9 +101,28 @@ class Intent:
     subtype: str | None = None
 
 
-def _lookup_subtype(question: str) -> str:
+# gear/tolerance symbols of ISO 21771 / ISO 53 (as typed, case-insensitive): "da nasıl hesaplanır?" asks for the
+# tip diameter formula even though "da" alone is also a Turkish particle
+GEAR_SYMBOLS = {"d", "da", "df", "db", "dw", "dv", "dy", "m", "mn", "mt", "mx", "z", "z1", "z2", "x", "k", "b",
+                "h", "ha", "hf", "p", "pt", "pn", "px", "pb", "pbt", "pz", "u", "aw", "αt", "αn", "αp", "αwt",
+                "αfp", "β", "βb", "ρfp", "hap", "hfp", "cp", "sp", "ep", "εα", "εβ", "εγ"}
+_SYMBOL_WORD = re.compile(r"(?<![^\W_])[^\W_]{1,4}(?![^\W_])", re.UNICODE)
+
+
+def mentions_gear_symbol(question: str) -> bool:
+    return any(tr_lower(w) in GEAR_SYMBOLS for w in _SYMBOL_WORD.findall(question))
+
+
+# compute verbs only: "kaç derece / kaç mm" asks for a value, not for a relation
+_COMPUTE_VERB = re.compile(r"(hesapla|hesabı|hesabını|hesaplar|hesap\s*yap|hesap\s*et|\bcalculate|\bcompute)",
+                           re.IGNORECASE | re.UNICODE)
+
+
+def _lookup_subtype(question: str, calc: ParsedCalc | None = None) -> str:
     if FORMULA_RE.search(question):
         return "standards_formula_lookup"
+    if calc is not None and not calc.inputs and _COMPUTE_VERB.search(question):
+        return "standards_formula_lookup"  # "mt'yi hesapla" without numbers asks for the relation
     if RANGE_RE.search(question):
         return "standards_range_lookup"
     return "standards_value_lookup"
@@ -128,17 +147,19 @@ def classify(message: str) -> Intent:
         if len(rest) < 3:
             return Intent("sources_only", wants_sources=True, question=question)
     calc = parse_calculation(question)
-    technical = has_technical_terms(question)
-    if calc.calc_type and (calc.has_calc_verb or "=" in question or calc.calc_type in TABLE_LOOKUPS):
+    formula_q = bool(FORMULA_RE.search(question))
+    technical = has_technical_terms(question) or (formula_q and mentions_gear_symbol(question))
+    # The calculation engine is reached ONLY with numeric inputs (a parsed calc type always has them).
+    if calc.calc_type and calc.inputs and (calc.has_calc_verb or "=" in question or calc.calc_type in TABLE_LOOKUPS):
         return Intent("calculation", wants_sources, wants_detail, calc=calc, question=question,
                       subtype="numeric_calculation")
     # A formula question without any numeric input ("d nasıl hesaplanır?") is a source lookup:
     # it must never reach the engine's input validation / range checks.
-    formula_only = bool(FORMULA_RE.search(question)) and not calc.inputs
+    formula_only = formula_q and not calc.inputs
     if calc.has_calc_verb and technical and not formula_only and has_parameter_digits(question):
         return Intent("calculation", wants_sources, wants_detail, calc=calc, question=question,
                       subtype="numeric_calculation")
     if technical:
         return Intent("technical", wants_sources, wants_detail, calc=calc, question=question,
-                      subtype=_lookup_subtype(question))
+                      subtype=_lookup_subtype(question, calc))
     return Intent("general", wants_sources, wants_detail, question=question)

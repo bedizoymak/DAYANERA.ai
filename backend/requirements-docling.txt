@@ -1,0 +1,16 @@
+# OPTIONAL Docling parser environment (NOT the backend environment).
+# Docling pulls in PyTorch and layout/table models, so it lives in its own virtual
+# environment and runs out of process (backend/app/ingestion/parsing/docling_runner.py).
+# The pilot evaluation (docs/RAG_INGESTION.md) selected PDF_PARSER=pymupdf; install this
+# only to use PDF_PARSER=hybrid|docling or to repeat the parser comparison:
+#
+#   python -m venv data\tools\parser-eval-venv
+#   data\tools\parser-eval-venv\Scripts\python -m pip install -r backend\requirements-docling.txt
+#   DOCLING_PYTHON=<repo>\data\tools\parser-eval-venv\Scripts\python.exe   (in .env)
+#
+# Licences (checked 2026-09-27): docling, docling-core, docling-parse, docling-ibm-models: MIT;
+# torch: BSD-style/Apache-2.0; transformers, rapidocr: Apache-2.0. Model weights are downloaded
+# from Hugging Face on first use: docling-layout-heron Apache-2.0; docling-models (TableFormer)
+# and CodeFormulaV2: CDLA-Permissive-2.0. pymupdf: AGPL-3.0 or Artifex commercial (see docs).
+docling==2.130.0
+pymupdf==1.28.2

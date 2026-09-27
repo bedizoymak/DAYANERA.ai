@@ -44,7 +44,12 @@ GLOSSARY: dict[str, list[str]] = {
     "diş başı yüksekliği": ["addendum"],
     "diş dibi yüksekliği": ["dedendum"],
     "diş başı": ["addendum", "tip"],
+    "diş dibi radyüsü": ["fillet radius", "root fillet"],
     "diş dibi": ["dedendum", "root"],
+    "radyüs": ["radius"],
+    "standart tolerans derece": ["standard tolerance grade"],
+    "tolerans derece": ["tolerance grade"],
+    "referans çizgisi": ["datum line", "reference line"],
     "diş yüksekliği": ["tooth depth"],
     "diş kalınlığı": ["tooth thickness"],
     "diş boşluğu": ["space width"],
@@ -278,6 +283,9 @@ QUESTION_WORDS = {
     "neyi", "neyin", "neye", "temsil", "temsilen", "anlama", "anlamı", "anlamına", "anlamina", "gelir",
     "demek", "demektir", "belirtir", "gösterir", "olduğu", "olduğunu", "oldugu", "değerini", "değerine",
     "bağıntı", "bağıntısı", "bağıntısını", "kullanarak", "hesaplanıyor",
+    # clause references are structural ("madde 5.4" -> clause 5.4), not words a passage must contain
+    "madde", "maddesi", "maddesine", "maddesinde", "üzerinde", "üzerindeki", "üzerine",
+    "hangisidir", "hangileridir", "hangileri", "derecedir",
     "ler", "lar", "leri", "ları", "lerin", "ların", "lere", "lara", "yle", "yla", "nde", "nda",
 }
 # Greek symbol names typed in ASCII; retrieval matches them against the Greek letter too
@@ -290,7 +298,8 @@ GREEK_NAMES: dict[str, str] = {
 # Scoring-only aliases for generic Turkish words (Order C relevance gate). They are
 # deliberately NOT glossary entries so that they never make a message "technical".
 SCORING_ALIASES: dict[str, list[str]] = {
-    "sınıf": ["class", "grade"], "tür": ["type"], "çeşit": ["type", "kind"], "hız": ["speed", "velocity"],
+    "sınıf": ["class", "grade"], "tür": ["type"], "tip": ["type"], "kapsa": ["cover", "scope"],
+    "çeşit": ["type", "kind"], "hız": ["speed", "velocity"],
     "kesme": ["cutting"], "kuvvet": ["force"], "değişken": ["variable"], "birim": ["unit"],
 }
 # Generic question words that only POSITION the excerpt window (e.g. on the "valid ... range" line).
@@ -351,7 +360,7 @@ def annotate_first_use(text: str, max_terms: int = 8) -> str:
 _GENERIC_EN = {"of", "and", "the", "number", "total", "form", "table", "class", "fit", "definition", "symbol", "scope",
                "range", "application", "reference", "control", "checking", "datum", "equation", "formula", "power",
                "life", "speed", "moment", "height", "oil", "noise", "surface", "material", "test", "factor",
-               "standard", "standards", "iso", "din"}
+               "standard", "standards", "iso", "din", "line"}
 ENGLISH_TECH_WORDS = {w for alts in GLOSSARY.values() for p in alts for w in p.split()} - _GENERIC_EN
 
 

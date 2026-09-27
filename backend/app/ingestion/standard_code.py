@@ -32,11 +32,42 @@ def detect_standard_code(first_pages_text: str, filename: str) -> str | None:
         tied = [c for c, s in best if s == top_score]
         tied.sort(key=lambda c: (":" not in c, -len(c)))
         return tied[0]
+    return filename_code(filename)
+
+
+_CANONICAL = re.compile(r"^(ISO(?:/TR|/TS)?) (\d{2,5})(?:-(\d{1,2}))?:(\d{4})$")
+
+
+def filename_code(filename: str) -> str | None:
     m = _FILENAME_CODE.search(filename)
-    if m:
-        prefix = "ISO/" + m.group(1) + " " if m.group(1) else "ISO "
-        return f"{prefix}{m.group(2)}:{m.group(3)}"
-    return None
+    if not m:
+        return None
+    prefix = "ISO/" + m.group(1) + " " if m.group(1) else "ISO "
+    return f"{prefix}{m.group(2)}:{m.group(3)}"
+
+
+def validate_code(code: str | None, filename: str) -> dict:
+    """Deterministic checks of a detected standard code (never delegated to a model).
+
+    Issues: missing year / non-canonical form, a different standard number or part
+    than the file name states, or a different edition year.
+    """
+    issues: list[str] = []
+    from_name = filename_code(filename)
+    m = _CANONICAL.match(code or "")
+    if code and not m:
+        issues.append(f"kanonik olmayan kod biçimi: {code}")
+    if code and from_name:
+        n = _CANONICAL.match(from_name)
+        if m and n:
+            if (m.group(1), m.group(2)) != (n.group(1), n.group(2)):
+                issues.append(f"metindeki kod ({code}) dosya adındakinden ({from_name}) farklı")
+            elif m.group(4) != n.group(4):
+                issues.append(f"baskı yılı uyuşmuyor: metin {m.group(4)}, dosya adı {n.group(4)}")
+    year = m.group(4) if m else None
+    if year and not 1947 <= int(year) <= 2035:
+        issues.append(f"geçersiz yıl: {year}")
+    return {"code": code, "filename_code": from_name, "canonical": bool(m), "issues": issues}
 
 
 def clean_title(filename: str, standard_code: str | None) -> str:

@@ -1,0 +1,23 @@
+# DAYANERA.ai - HEAVY (experimental) model: Qwen3.8 27B, exact Q2_K quantization.
+#
+# Ollama publishes no official Q2_K for qwen3.8 (only q4_K_M / q8_0 / bf16 / nvfp4 / mxfp8),
+# so the weights come from the GGUF quantized from the unmodified official Qwen/Qwen3.8-27B:
+#   https://huggingface.co/bartowski/Qwen3.8-27B-GGUF  file Qwen3.8-27B-Q2_K.gguf (10.08 GB)
+#   sha256 e497fba78fcff90617cc98d19d951ac07ea6a5a08c17177fb92018206848d6ec
+# GGUF architecture "qwen35" = the same family as Ollama's official qwen3.8 build.
+#
+# Install (done by DAYANERA_HOME_SERVER_FINAL_DOCUMENTS.ps1; run from the repo root):
+#   ollama pull hf.co/bartowski/Qwen3.8-27B-GGUF:Q2_K
+#   ollama create qwen3.8-27b-q2_K -f scripts\models\qwen3.8-27b-q2_K.Modelfile
+#
+# RENDERER / PARSER / PARAMETERs mirror the official qwen3.8:27b manifest so prompt
+# formatting and the separate "thinking" field (think=false) behave like the official model.
+FROM hf.co/bartowski/Qwen3.8-27B-GGUF:Q2_K
+RENDERER qwen3.8
+PARSER qwen3.5
+PARAMETER temperature 1
+PARAMETER top_k 20
+PARAMETER top_p 0.95
+PARAMETER min_p 0
+PARAMETER presence_penalty 0
+PARAMETER repeat_penalty 1

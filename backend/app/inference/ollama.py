@@ -37,6 +37,7 @@ class LocalOllamaProvider:
         self.num_ctx = settings.ollama_num_ctx
         self.num_predict = settings.ollama_num_predict
         self.keep_alive = settings.ollama_keep_alive
+        self.think = settings.ollama_think
         self.timeout = httpx.Timeout(settings.ollama_request_timeout_seconds, connect=5.0)
 
     # trust_env=False: never route localhost inference through system proxies
@@ -57,6 +58,7 @@ class LocalOllamaProvider:
             "stream": stream,
             "options": opts,
             "keep_alive": self.keep_alive,
+            "think": self.think,
         }
         if options.json_mode:
             payload["format"] = "json"

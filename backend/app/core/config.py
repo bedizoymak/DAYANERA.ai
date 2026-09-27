@@ -65,11 +65,17 @@ class Settings(BaseSettings):
 
     # --- inference ---
     ollama_base_url: str = "http://127.0.0.1:11434"
-    ollama_model: str = "qwen2.5:14b-instruct-q4_K_M"
+    ollama_model: str = "qwen3:14b-q4_K_M"
+    # Optional side-by-side models (informational; not routed to automatically yet).
+    ollama_fast_model: str = ""
+    ollama_heavy_model: str = ""
     ollama_request_timeout_seconds: float = 600.0
     ollama_num_ctx: int = 4096
     ollama_num_predict: int = 700
     ollama_keep_alive: str = "30m"
+    # Reasoning ("thinking") for models that support it (e.g. qwen3). Off: thinking
+    # would consume num_predict and add latency; ignored by non-thinking models.
+    ollama_think: bool = False
 
     # --- initial admin ---
     initial_admin_username: str = "admin"

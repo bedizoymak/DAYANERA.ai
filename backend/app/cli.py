@@ -31,7 +31,8 @@ def cmd_check_config() -> int:
     print(json.dumps({
         "app_bind": f"{s.app_host}:{s.app_port}", "frontend_bind": f"{s.frontend_host}:{s.frontend_port}",
         "database": f"{s.postgres_host}:{s.postgres_port}/{s.postgres_db}", "ollama": s.ollama_base_url,
-        "model": s.ollama_model, "project_root": str(s.project_root), "iso_booklets": str(s.iso_booklets_path),
+        "model": s.ollama_model, "fast_model": s.ollama_fast_model or None,
+        "heavy_model": s.ollama_heavy_model or None, "project_root": str(s.project_root), "iso_booklets": str(s.iso_booklets_path),
         "data_root": str(s.data_root), "agent_notes": str(s.agent_notes_path), "supabase_enabled": s.supabase_enabled,
         "online_providers_enabled": s.openai_enabled or s.anthropic_enabled, "warnings": warnings,
     }, ensure_ascii=False, indent=2))
@@ -63,8 +64,10 @@ def cmd_serve() -> int:
     import uvicorn
 
     s = get_settings()
-    uvicorn.run("app.main:app", host=s.app_host, port=s.app_port, log_level="info", proxy_headers=False,
-                server_header=False)
+    # X-Forwarded-* is trusted only from the loopback reverse proxy (Caddy for LAN access),
+    # so audit logs see the real LAN client and the scheme is https behind the proxy.
+    uvicorn.run("app.main:app", host=s.app_host, port=s.app_port, log_level="info", proxy_headers=True,
+                forwarded_allow_ips="127.0.0.1", server_header=False)
     return 0
 
 

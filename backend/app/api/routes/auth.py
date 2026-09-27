@@ -28,7 +28,8 @@ def login(body: LoginIn, request: Request, response: Response, db: Session = Dep
     user, token = res
     db.commit()
     response.set_cookie(
-        SESSION_COOKIE, token, httponly=True, samesite="strict", secure=False, path="/",
+        # Secure over HTTPS (LAN reverse proxy); plain http://127.0.0.1 keeps working locally.
+        SESSION_COOKIE, token, httponly=True, samesite="strict", secure=request.url.scheme == "https", path="/",
         max_age=settings.session_ttl_hours * 3600,
     )
     return _user_out(user)

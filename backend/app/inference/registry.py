@@ -34,6 +34,8 @@ def provider_status(settings: Settings) -> dict:
                 "active": True,
                 "endpoint": settings.ollama_base_url,
                 "model": settings.ollama_model,
+                "fast_model": settings.ollama_fast_model or None,
+                "heavy_model": settings.ollama_heavy_model or None,
                 "configured": True,
             },
             {"name": openai.name, "enabled": False, "active": False, "configured": openai.configured,

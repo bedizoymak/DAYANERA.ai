@@ -11,7 +11,8 @@ Commands:
   corpus-approve   --code "ISO 53" --by <owner_admin> [--note ...]   approve for the verified corpus
   corpus-revoke    --code ... --by ... --note ...                     take out of the verified corpus
   corpus-reject    --code ... --by ... --note ...                     mark the extraction as failed
-  knowledge-validate   authority validation of the formula registry (exit 1 on an engine CONFLICT)
+  knowledge-validate   [--out docs/knowledge/formula_registry_validation.json]  authority validation snapshot
+                       of the formula registry (exit 1 on an engine CONFLICT)
   knowledge-scan       --repos DIR [--out FILE] [--update-registry]   static reference-repository scan
   knowledge-reverify   re-run the regression of corrections verified with another engine/registry
 """
@@ -187,7 +188,7 @@ def main(argv: list[str] | None = None) -> int:
             "corpus-approve": lambda: cmd_corpus_action("approve", args.code, args.by, args.note),
             "corpus-revoke": lambda: cmd_corpus_action("revoke", args.code, args.by, args.note),
             "corpus-reject": lambda: cmd_corpus_action("reject", args.code, args.by, args.note),
-            "knowledge-validate": cmd_knowledge_validate,
+            "knowledge-validate": lambda: cmd_knowledge_validate(args.out),
             "knowledge-scan": lambda: cmd_knowledge_scan(args.repos, args.out, args.update_registry),
             "knowledge-reverify": cmd_knowledge_reverify,
         }[args.command]()
@@ -196,23 +197,27 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
 
-def cmd_knowledge_validate() -> int:
-    """Authority validation of the registry; prints counts and conflict records (no DB needed)."""
-    from app.knowledge.validation import validate
+def cmd_knowledge_validate(out: str | None = None) -> int:
+    """Authority validation of the registry; prints (or writes) the deterministic snapshot (no DB needed)."""
+    from pathlib import Path
+
+    from app.knowledge.validation import snapshot, validate
 
     report = validate()
-    summary = report.summary()
-    print(json.dumps({"summary": summary, "conflicts": [
-        {k: c[k] for k in ("id", "rule_id", "repo", "file", "line", "commit", "max_rel_error", "suspected_error_class")}
-        for c in report.conflicts()]}, ensure_ascii=False, indent=2))
-    return 1 if summary["by_status"]["CONFLICT"] else 0
+    text = json.dumps(snapshot(report), ensure_ascii=False, indent=2) + "\n"
+    if out:
+        Path(out).write_text(text, encoding="utf-8")
+        print(f"Doğrulama anlık görüntüsü yazıldı: {out}")
+    else:
+        print(text)
+    return 1 if report.summary()["by_status"]["CONFLICT"] else 0
 
 
 def cmd_knowledge_scan(repos: str | None, out: str | None, update: bool) -> int:
     """Static scan of reference repositories cloned OUTSIDE the DAYANERA tree (nothing is executed)."""
     from pathlib import Path
 
-    from app.knowledge.scanner import scan, update_registry_anchors
+    from app.knowledge.scanner import compact, scan, update_registry_anchors
 
     if not repos:
         print("--repos gerekli (ör. /tmp/dayanera-reference-repos)", file=sys.stderr)
@@ -224,11 +229,10 @@ def cmd_knowledge_scan(repos: str | None, out: str | None, update: bool) -> int:
     result = scan(root)
     if update:
         result["registry_anchors_updated"] = update_registry_anchors(result)
-    text = json.dumps(result, ensure_ascii=False, indent=2)
     if out:
-        Path(out).write_text(text + "\n", encoding="utf-8")
+        Path(out).write_text(json.dumps(compact(result), ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
     else:
-        print(text)
+        print(json.dumps(result, ensure_ascii=False, indent=2))
     bad = [a for a in result["anchors"] if a["state"] in ("changed", "missing")]
     return 1 if bad else 0
 

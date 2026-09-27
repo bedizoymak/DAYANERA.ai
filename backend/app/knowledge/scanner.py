@@ -25,7 +25,7 @@ import json
 import re
 import subprocess
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -151,23 +151,22 @@ def discover(root: Path) -> list[dict[str, Any]]:
         tree = _parse(path)
         if tree is None:
             continue
-        rel = path.relative_to(root).as_posix()
-
-        def visit(node: ast.AST, stack: list[str]) -> None:
-            for child in ast.iter_child_nodes(node):
-                if isinstance(child, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)):
-                    visit(child, [*stack, child.name])
-                    continue
-                for t in _targets(child):
-                    text = ast.unparse(t)
-                    if VOCAB.match(text):
-                        value = getattr(child, "value", None) or child
-                        found.append({"file": rel, "symbol": _qualname(stack), "target": text, "line": child.lineno,
-                                      "fingerprint": fingerprint(value)})
-                visit(child, stack)
-
-        visit(tree, [])
+        _visit(tree, [], path.relative_to(root).as_posix(), found)
     return found
+
+
+def _visit(node: ast.AST, stack: list[str], rel: str, found: list[dict[str, Any]]) -> None:
+    for child in ast.iter_child_nodes(node):
+        if isinstance(child, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)):
+            _visit(child, [*stack, child.name], rel, found)
+            continue
+        for t in _targets(child):
+            text = ast.unparse(t)
+            if VOCAB.match(text):
+                value = getattr(child, "value", None) or child
+                found.append({"file": rel, "symbol": _qualname(stack), "target": text, "line": child.lineno,
+                              "fingerprint": fingerprint(value)})
+        _visit(child, stack, rel, found)
 
 
 def scan(repos_root: Path, registry: Registry | None = None) -> dict[str, Any]:
@@ -220,9 +219,23 @@ def scan(repos_root: Path, registry: Registry | None = None) -> dict[str, Any]:
             "anchors": {s: sum(1 for a in repo_anchors if a["state"] == s)
                         for s in ("ok", "moved", "changed", "missing", "repo_or_file_missing")},
         })
-    return {"schema": "dayanera.reference_scan/1", "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+    return {"schema": "dayanera.reference_scan/1", "generated_at": datetime.now(UTC).isoformat(timespec="seconds"),
             "method": "static ast.parse only; no import/exec/install; *.py under 1 MB; source text never stored",
             "repositories": repos, "anchors": anchors, "unreviewed_discoveries": discoveries}
+
+
+def compact(result: dict[str, Any]) -> dict[str, Any]:
+    """Reviewable manifest: one line per anchor / discovery, no fingerprints of discoveries."""
+    return {
+        "schema": "dayanera.reference_scan_manifest/1", "generated_at": result["generated_at"],
+        "method": result["method"], "repositories": result["repositories"],
+        "anchor_states": {s: sum(1 for a in result["anchors"] if a["state"] == s)
+                          for s in ("ok", "moved", "changed", "missing", "repo_or_file_missing")},
+        "anchors": [f"{a['state']:7s} {a['repo']}:{a['file']}:{a['line']} {a['symbol']} {a['target']} -> {a['rule_id']}"
+                    for a in result["anchors"]],
+        "unreviewed_discoveries": [f"{d['repo']}:{d['file']}:{d['line']} {d['symbol'] or '<module>'} {d['target']}"
+                                   for d in result["unreviewed_discoveries"]],
+    }
 
 
 def update_registry_anchors(result: dict[str, Any], path: Path = FORMULAS_FILE) -> int:
@@ -239,10 +252,10 @@ def update_registry_anchors(result: dict[str, Any], path: Path = FORMULAS_FILE) 
             a = by_key.get((rule["id"], o["repo"], o["file"], o.get("symbol", ""), o["target"]))
             if not a or a["line"] is None:
                 continue
-            if a["state"] in ("ok", "moved") or not o.get("fingerprint"):
-                if o.get("line") != a["line"] or o.get("fingerprint") != a["fingerprint"]:
-                    o["line"], o["fingerprint"] = a["line"], a["fingerprint"]
-                    updated += 1
+            refreshable = a["state"] in ("ok", "moved") or not o.get("fingerprint")
+            if refreshable and (o.get("line") != a["line"] or o.get("fingerprint") != a["fingerprint"]):
+                o["line"], o["fingerprint"] = a["line"], a["fingerprint"]
+                updated += 1
     if updated:
         path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     return updated

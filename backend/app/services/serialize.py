@@ -11,7 +11,8 @@ from app.domain.enums import ANSWER_MODE_LABELS_TR, AnswerMode
 
 _PUBLIC_META = ("calculation_id", "calc_type", "calc_status", "mismatch", "detail_open", "notice", "reason",
                 "sources_for_message_id", "draft_used", "attachments_pending", "note_filename", "memory_item_id",
-                "kind", "document_count", "verified_document_count", "refusal", "timings_ms", "best_score", "min_score")
+                "kind", "document_count", "verified_document_count", "refusal", "timings_ms", "best_score", "min_score",
+                "self_maintenance")
 
 
 def source_to_dict(s: MessageSource) -> dict[str, Any]:

@@ -30,7 +30,7 @@ import logging
 import math
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from functools import lru_cache
+from functools import cache, lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -160,7 +160,7 @@ def build_env(base: dict[str, float], derive_rules: list[Rule], extras: tuple[tu
     return env
 
 
-@lru_cache(maxsize=None)
+@cache
 def matrix_envs(name: str) -> tuple[dict[str, float], ...]:
     make, extras = MATRICES[name]
     derive = [r for r in get_registry().rules if r.derive and r.kind == "formula"]
@@ -189,7 +189,7 @@ def engine_value(binding_unit: str | None, value: float) -> float:
     return math.radians(value) if binding_unit == "deg" else value
 
 
-@lru_cache(maxsize=None)
+@cache
 def _engine_matrix(calc_type: str, matrix: str) -> tuple[dict[str, float] | None, ...]:
     out: list[dict[str, float] | None] = []
     for env in matrix_envs(matrix):
@@ -568,6 +568,24 @@ def provenance(rule_id: str, resolver: Any = None) -> dict[str, Any] | None:
         "conflicts": [o.public(registry) for o in v.conflicts],
         "dayanera_tests": list(rule.dayanera_tests),
         "implementation_notes": rule.implementation_notes,
+    }
+
+
+def snapshot(report: ValidationReport) -> dict[str, Any]:
+    """Deterministic, reviewable validation result (docs/knowledge/formula_registry_validation.json)."""
+    from app.calc.engine import ENGINE_VERSION
+    from app.knowledge.regression import registry_fingerprint
+
+    conflict_keys = ("id", "rule_id", "rule_status", "repo", "file", "symbol", "target", "line", "commit", "license",
+                     "max_rel_error", "counterexample", "suspected_error_class", "permalink")
+    return {
+        "schema": "dayanera.formula_registry_validation/1",
+        "engine_version": ENGINE_VERSION,
+        "registry_fingerprint": registry_fingerprint(),
+        "summary": report.summary(),
+        "rules": [{**rule_summary(v), "engine_cases": v.engine_cases,
+                   "engine_max_rel_error": v.engine_max_rel_error} for v in report.results.values()],
+        "conflicts": [{k: c.get(k) for k in conflict_keys} for c in report.conflicts()],
     }
 
 

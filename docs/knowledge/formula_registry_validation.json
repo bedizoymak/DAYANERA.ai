@@ -1,0 +1,1112 @@
+{
+  "schema": "dayanera.formula_registry_validation/1",
+  "engine_version": "1.0.0",
+  "registry_fingerprint": "eff325b6ed7b94bf",
+  "summary": {
+    "rules": 43,
+    "by_status": {
+      "VERIFIED": 23,
+      "CANDIDATE": 18,
+      "UNVERIFIED": 1,
+      "CONFLICT": 0,
+      "REJECTED": 1
+    },
+    "conflict_records": 10,
+    "observations": {
+      "SUPPORTS": 67,
+      "CONFLICT": 10,
+      "NOT_EVALUATED": 1
+    },
+    "repositories": {
+      "freecad.gears": {
+        "SUPPORTS": 27,
+        "CONFLICT": 2,
+        "NOT_EVALUATED": 0
+      },
+      "bd_warehouse": {
+        "SUPPORTS": 14,
+        "CONFLICT": 0,
+        "NOT_EVALUATED": 0
+      },
+      "cq_gears": {
+        "SUPPORTS": 19,
+        "CONFLICT": 7,
+        "NOT_EVALUATED": 0
+      },
+      "FreeCAD": {
+        "SUPPORTS": 7,
+        "CONFLICT": 1,
+        "NOT_EVALUATED": 1
+      }
+    },
+    "engine_checked_cases": 6157
+  },
+  "rules": [
+    {
+      "id": "gear.cyl.transverse_module",
+      "name": "Transverse module",
+      "name_tr": "Alın modülü",
+      "family": "transverse_conversion",
+      "kind": "formula",
+      "status": "VERIFIED",
+      "confidence": "iso_evidence_and_engine",
+      "display": "m_t = m_n / cos β",
+      "iso_citation": "ISO 21771:2007 4.2.7, Eq. (2)",
+      "engine": [
+        "cylindrical_gear_geometry:m_t",
+        "transverse_module:m_t"
+      ],
+      "supporting_repositories": [
+        "bd_warehouse",
+        "cq_gears",
+        "freecad.gears"
+      ],
+      "conflicts": 0,
+      "engine_cases": 548,
+      "engine_max_rel_error": 0.0
+    },
+    {
+      "id": "gear.cyl.transverse_pressure_angle",
+      "name": "Transverse pressure angle",
+      "name_tr": "Alın kavrama açısı",
+      "family": "transverse_conversion",
+      "kind": "formula",
+      "status": "VERIFIED",
+      "confidence": "iso_evidence_and_engine",
+      "display": "tan α_n = tan α_t · cos β  ⇒  α_t = arctan(tan α_n / cos β)",
+      "iso_citation": "ISO 21771:2007 4.3.6, Eq. (14)",
+      "engine": [
+        "cylindrical_gear_geometry:alpha_t",
+        "gear_pair:alpha_t"
+      ],
+      "supporting_repositories": [
+        "bd_warehouse",
+        "freecad.gears"
+      ],
+      "conflicts": 1,
+      "engine_cases": 274,
+      "engine_max_rel_error": 5.551115123125783e-17
+    },
+    {
+      "id": "gear.cyl.reference_diameter",
+      "name": "Reference diameter",
+      "name_tr": "Referans çapı",
+      "family": "reference_diameter",
+      "kind": "formula",
+      "status": "VERIFIED",
+      "confidence": "iso_evidence_and_engine",
+      "display": "d = z·m_t = z·m_n / cos β",
+      "iso_citation": "ISO 21771:2007 4.2.4, Eq. (1)",
+      "engine": [
+        "cylindrical_gear_geometry:d"
+      ],
+      "supporting_repositories": [
+        "FreeCAD",
+        "bd_warehouse",
+        "cq_gears",
+        "freecad.gears"
+      ],
+      "conflicts": 0,
+      "engine_cases": 274,
+      "engine_max_rel_error": 1.5251812870061554e-16
+    },
+    {
+      "id": "gear.cyl.base_diameter",
+      "name": "Base diameter",
+      "name_tr": "Temel daire çapı",
+      "family": "base_circle",
+      "kind": "formula",
+      "status": "VERIFIED",
+      "confidence": "iso_evidence_and_engine",
+      "display": "d_b = d·cos α_t = z·m_t·cos α_t",
+      "iso_citation": "ISO 21771:2007 4.3.5 Eq. (13) and 4.3.10 Eq. (19)",
+      "engine": [
+        "cylindrical_gear_geometry:d_b"
+      ],
+      "supporting_repositories": [
+        "FreeCAD",
+        "bd_warehouse",
+        "cq_gears",
+        "freecad.gears"
+      ],
+      "conflicts": 1,
+      "engine_cases": 274,
+      "engine_max_rel_error": 1.6936068780399635e-16
+    },
+    {
+      "id": "gear.cyl.normal_pitch",
+      "name": "Normal pitch",
+      "name_tr": "Normal adım",
+      "family": "pitch",
+      "kind": "formula",
+      "status": "VERIFIED",
+      "confidence": "iso_evidence_and_engine",
+      "display": "p_n = π·m_n",
+      "iso_citation": "ISO 21771:2007 4.4.2.2, Eq. (24)",
+      "engine": [
+        "cylindrical_gear_geometry:p_n"
+      ],
+      "supporting_repositories": [],
+      "conflicts": 0,
+      "engine_cases": 274,
+      "engine_max_rel_error": 0.0
+    },
+    {
+      "id": "gear.cyl.transverse_pitch",
+      "name": "Transverse pitch",
+      "name_tr": "Alın adımı",
+      "family": "pitch",
+      "kind": "formula",
+      "status": "VERIFIED",
+      "confidence": "iso_evidence_and_engine",
+      "display": "p_t = π·m_t",
+      "iso_citation": "ISO 21771:2007 4.4.2.1, Eq. (23)",
+      "engine": [
+        "cylindrical_gear_geometry:p_t"
+      ],
+      "supporting_repositories": [
+        "freecad.gears"
+      ],
+      "conflicts": 0,
+      "engine_cases": 274,
+      "engine_max_rel_error": 0.0
+    },
+    {
+      "id": "gear.cyl.transverse_base_pitch",
+      "name": "Transverse base pitch",
+      "name_tr": "Alın temel adımı",
+      "family": "base_circle",
+      "kind": "formula",
+      "status": "VERIFIED",
+      "confidence": "iso_evidence_and_engine",
+      "display": "p_bt = p_t·cos α_t = π·m_t·cos α_t = π·d_b / z",
+      "iso_citation": "ISO 21771:2007 4.4.5, Eq. (28)",
+      "engine": [
+        "cylindrical_gear_geometry:p_bt"
+      ],
+      "supporting_repositories": [],
+      "conflicts": 0,
+      "engine_cases": 274,
+      "engine_max_rel_error": 0.0
+    },
+    {
+      "id": "gear.cyl.addendum",
+      "name": "Addendum",
+      "name_tr": "Diş başı yüksekliği",
+      "family": "tooth_depth",
+      "kind": "formula",
+      "status": "VERIFIED",
+      "confidence": "iso_evidence_and_engine",
+      "display": "h_a = h_aP + x·m_n + k·m_n",
+      "iso_citation": "ISO 21771:2007 4.6.2, Eq. (36)",
+      "engine": [
+        "cylindrical_gear_geometry:h_a"
+      ],
+      "supporting_repositories": [
+        "FreeCAD",
+        "bd_warehouse",
+        "cq_gears"
+      ],
+      "conflicts": 1,
+      "engine_cases": 274,
+      "engine_max_rel_error": 0.0
+    },
+    {
+      "id": "gear.cyl.dedendum",
+      "name": "Dedendum",
+      "name_tr": "Diş dibi yüksekliği",
+      "family": "tooth_depth",
+      "kind": "formula",
+      "status": "VERIFIED",
+      "confidence": "iso_evidence_and_engine",
+      "display": "h_f = h_fP − x·m_n",
+      "iso_citation": "ISO 21771:2007 4.6.2, Eq. (37)",
+      "engine": [
+        "cylindrical_gear_geometry:h_f"
+      ],
+      "supporting_repositories": [
+        "FreeCAD",
+        "bd_warehouse",
+        "cq_gears"
+      ],
+      "conflicts": 1,
+      "engine_cases": 274,
+      "engine_max_rel_error": 0.0
+    },
+    {
+      "id": "gear.cyl.tooth_depth",
+      "name": "Tooth depth",
+      "name_tr": "Diş yüksekliği",
+      "family": "tooth_depth",
+      "kind": "formula",
+      "status": "VERIFIED",
+      "confidence": "iso_evidence_and_engine",
+      "display": "h = h_aP + k·m_n + h_fP",
+      "iso_citation": "ISO 21771:2007 4.6.1, Eq. (35)",
+      "engine": [
+        "cylindrical_gear_geometry:h"
+      ],
+      "supporting_repositories": [],
+      "conflicts": 0,
+      "engine_cases": 274,
+      "engine_max_rel_error": 0.0
+    },
+    {
+      "id": "gear.cyl.tip_diameter",
+      "name": "Tip diameter",
+      "name_tr": "Diş başı çapı",
+      "family": "tip_root_diameter",
+      "kind": "formula",
+      "status": "VERIFIED",
+      "confidence": "iso_evidence_and_engine",
+      "display": "d_a = d + 2(x·m_n + h_aP + k·m_n)",
+      "iso_citation": "ISO 21771:2007 4.5.3, Eq. (33)",
+      "engine": [
+        "cylindrical_gear_geometry:d_a"
+      ],
+      "supporting_repositories": [
+        "bd_warehouse",
+        "cq_gears",
+        "freecad.gears"
+      ],
+      "conflicts": 1,
+      "engine_cases": 274,
+      "engine_max_rel_error": 2.2129575797524562e-16
+    },
+    {
+      "id": "gear.cyl.root_diameter",
+      "name": "Root diameter",
+      "name_tr": "Diş dibi çapı",
+      "family": "tip_root_diameter",
+      "kind": "formula",
+      "status": "VERIFIED",
+      "confidence": "iso_evidence_and_engine",
+      "display": "d_f = d − 2(h_fP − x·m_n)",
+      "iso_citation": "ISO 21771:2007 4.5.4, Eq. (34)",
+      "engine": [
+        "cylindrical_gear_geometry:d_f"
+      ],
+      "supporting_repositories": [
+        "bd_warehouse",
+        "cq_gears",
+        "freecad.gears"
+      ],
+      "conflicts": 1,
+      "engine_cases": 274,
+      "engine_max_rel_error": 1.6942925869300981e-16
+    },
+    {
+      "id": "gear.rack.iso53_basic_rack",
+      "name": "ISO 53 standard basic rack proportions",
+      "name_tr": "ISO 53 standart temel kremayer oranları",
+      "family": "basic_rack",
+      "kind": "constants",
+      "status": "VERIFIED",
+      "confidence": "iso_evidence_and_engine",
+      "display": "α_P = 20°, h_aP = 1·m, c_P = 0,25·m, h_fP = 1,25·m, ρ_fP = 0,38·m",
+      "iso_citation": "ISO 53:1998 Table 2",
+      "engine": [],
+      "supporting_repositories": [
+        "FreeCAD",
+        "bd_warehouse",
+        "cq_gears",
+        "freecad.gears"
+      ],
+      "conflicts": 2,
+      "engine_cases": 3,
+      "engine_max_rel_error": 0.0
+    },
+    {
+      "id": "gear.pair.gear_ratio",
+      "name": "Gear ratio",
+      "name_tr": "Dişli oranı",
+      "family": "gear_pair",
+      "kind": "formula",
+      "status": "VERIFIED",
+      "confidence": "iso_evidence_and_engine",
+      "display": "u = z2 / z1 (z1 = pinion)",
+      "iso_citation": "ISO 21771:2007 5.2.1, Eq. (52)",
+      "engine": [
+        "gear_pair:u"
+      ],
+      "supporting_repositories": [],
+      "conflicts": 0,
+      "engine_cases": 144,
+      "engine_max_rel_error": 0.0
+    },
+    {
+      "id": "gear.pair.working_transverse_pressure_angle",
+      "name": "Working transverse pressure angle from the centre distance",
+      "name_tr": "Çalışma alın kavrama açısı (eksen mesafesinden)",
+      "family": "gear_pair",
+      "kind": "formula",
+      "status": "VERIFIED",
+      "confidence": "iso_evidence_and_engine",
+      "display": "α_wt = arccos[ m_n(z1+z2)/(2·a_w·cos β) · cos α_t ]",
+      "iso_citation": "ISO 21771:2007 5.2.4, Eq. (54)",
+      "engine": [
+        "gear_pair:alpha_wt"
+      ],
+      "supporting_repositories": [
+        "freecad.gears"
+      ],
+      "conflicts": 0,
+      "engine_cases": 144,
+      "engine_max_rel_error": 5.551115123125783e-17
+    },
+    {
+      "id": "iso1328.single_pitch_tolerance",
+      "name": "Single pitch tolerance",
+      "name_tr": "Tek adım toleransı",
+      "family": "iso1328_tolerance",
+      "kind": "formula",
+      "status": "VERIFIED",
+      "confidence": "iso_evidence_and_engine",
+      "display": "f_pT = (0,001·d + 0,4·m_n + 5)·(√2)^(A−5)",
+      "iso_citation": "ISO 1328-1:2013 5.3.1, Formula (5); 5.2.2 step factor",
+      "engine": [
+        "iso1328_flank_tolerance:f_pT"
+      ],
+      "supporting_repositories": [],
+      "conflicts": 0,
+      "engine_cases": 288,
+      "engine_max_rel_error": 0.0
+    },
+    {
+      "id": "iso1328.total_cumulative_pitch_tolerance",
+      "name": "Total cumulative pitch tolerance",
+      "name_tr": "Toplam kümülatif adım toleransı",
+      "family": "iso1328_tolerance",
+      "kind": "formula",
+      "status": "VERIFIED",
+      "confidence": "iso_evidence_and_engine",
+      "display": "F_pT = (0,002·d + 0,55·√d + 0,7·m_n + 12)·(√2)^(A−5)",
+      "iso_citation": "ISO 1328-1:2013 5.3.2, Formula (6)",
+      "engine": [
+        "iso1328_flank_tolerance:F_pT"
+      ],
+      "supporting_repositories": [],
+      "conflicts": 0,
+      "engine_cases": 288,
+      "engine_max_rel_error": 0.0
+    },
+    {
+      "id": "iso1328.profile_slope_tolerance",
+      "name": "Profile slope tolerance",
+      "name_tr": "Profil eğim toleransı",
+      "family": "iso1328_tolerance",
+      "kind": "formula",
+      "status": "VERIFIED",
+      "confidence": "iso_evidence_and_engine",
+      "display": "f_HαT = (0,4·m_n + 0,001·d + 4)·(√2)^(A−5)",
+      "iso_citation": "ISO 1328-1:2013 5.3.3.1, Formula (7)",
+      "engine": [
+        "iso1328_flank_tolerance:f_HaT"
+      ],
+      "supporting_repositories": [],
+      "conflicts": 0,
+      "engine_cases": 288,
+      "engine_max_rel_error": 0.0
+    },
+    {
+      "id": "iso1328.profile_form_tolerance",
+      "name": "Profile form tolerance",
+      "name_tr": "Profil form toleransı",
+      "family": "iso1328_tolerance",
+      "kind": "formula",
+      "status": "VERIFIED",
+      "confidence": "iso_evidence_and_engine",
+      "display": "f_fαT = (0,55·m_n + 5)·(√2)^(A−5)",
+      "iso_citation": "ISO 1328-1:2013 5.3.3.2, Formula (8)",
+      "engine": [
+        "iso1328_flank_tolerance:f_faT"
+      ],
+      "supporting_repositories": [],
+      "conflicts": 0,
+      "engine_cases": 288,
+      "engine_max_rel_error": 0.0
+    },
+    {
+      "id": "iso1328.total_profile_tolerance",
+      "name": "Total profile tolerance",
+      "name_tr": "Toplam profil toleransı",
+      "family": "iso1328_tolerance",
+      "kind": "formula",
+      "status": "VERIFIED",
+      "confidence": "iso_evidence_and_engine",
+      "display": "F_αT = √(f_HαT² + f_fαT²) (unrounded components)",
+      "iso_citation": "ISO 1328-1:2013 5.3.3.3, Formula (9)",
+      "engine": [
+        "iso1328_flank_tolerance:F_aT"
+      ],
+      "supporting_repositories": [],
+      "conflicts": 0,
+      "engine_cases": 288,
+      "engine_max_rel_error": 0.0
+    },
+    {
+      "id": "iso1328.helix_slope_tolerance",
+      "name": "Helix slope tolerance",
+      "name_tr": "Helis eğim toleransı",
+      "family": "iso1328_tolerance",
+      "kind": "formula",
+      "status": "VERIFIED",
+      "confidence": "iso_evidence_and_engine",
+      "display": "f_HβT = (0,05·√d + 0,35·√b + 4)·(√2)^(A−5)",
+      "iso_citation": "ISO 1328-1:2013 5.3.4.1, Formula (10)",
+      "engine": [
+        "iso1328_flank_tolerance:f_HbT"
+      ],
+      "supporting_repositories": [],
+      "conflicts": 0,
+      "engine_cases": 288,
+      "engine_max_rel_error": 0.0
+    },
+    {
+      "id": "iso1328.helix_form_tolerance",
+      "name": "Helix form tolerance",
+      "name_tr": "Helis form toleransı",
+      "family": "iso1328_tolerance",
+      "kind": "formula",
+      "status": "VERIFIED",
+      "confidence": "iso_evidence_and_engine",
+      "display": "f_fβT = (0,07·√d + 0,45·√b + 4)·(√2)^(A−5)",
+      "iso_citation": "ISO 1328-1:2013 5.3.4.2, Formula (11)",
+      "engine": [
+        "iso1328_flank_tolerance:f_fbT"
+      ],
+      "supporting_repositories": [],
+      "conflicts": 0,
+      "engine_cases": 288,
+      "engine_max_rel_error": 0.0
+    },
+    {
+      "id": "iso1328.total_helix_tolerance",
+      "name": "Total helix tolerance",
+      "name_tr": "Toplam helis toleransı",
+      "family": "iso1328_tolerance",
+      "kind": "formula",
+      "status": "VERIFIED",
+      "confidence": "iso_evidence_and_engine",
+      "display": "F_βT = √(f_HβT² + f_fβT²) (unrounded components)",
+      "iso_citation": "ISO 1328-1:2013 5.3.4.3, Formula (12)",
+      "engine": [
+        "iso1328_flank_tolerance:F_bT"
+      ],
+      "supporting_repositories": [],
+      "conflicts": 0,
+      "engine_cases": 288,
+      "engine_max_rel_error": 0.0
+    },
+    {
+      "id": "gear.involute.function",
+      "name": "Involute function",
+      "name_tr": "Evolvent fonksiyonu",
+      "family": "involute",
+      "kind": "formula",
+      "status": "CANDIDATE",
+      "confidence": "multiple_independent_implementations",
+      "display": "inv α = tan α − α (α in radians)",
+      "iso_citation": "ISO 21771:2007 defines the involute function; no DAYANERA evidence requirement anchors it yet",
+      "engine": [],
+      "supporting_repositories": [
+        "FreeCAD",
+        "bd_warehouse",
+        "cq_gears",
+        "freecad.gears"
+      ],
+      "conflicts": 0,
+      "engine_cases": 0,
+      "engine_max_rel_error": 0.0
+    },
+    {
+      "id": "gear.involute.radius_at_roll_angle",
+      "name": "Involute radius at roll angle",
+      "name_tr": "Açılma açısında evolvent yarıçapı",
+      "family": "involute",
+      "kind": "formula",
+      "status": "CANDIDATE",
+      "confidence": "single_tested_implementation",
+      "display": "r_y = r_b·√(1 + φ²)",
+      "iso_citation": "involute geometry (definition of the circle involute)",
+      "engine": [],
+      "supporting_repositories": [
+        "freecad.gears"
+      ],
+      "conflicts": 0,
+      "engine_cases": 0,
+      "engine_max_rel_error": 0.0
+    },
+    {
+      "id": "gear.pair.working_pressure_angle_profile_shift",
+      "name": "Working pressure angle of a profile-shifted external pair",
+      "name_tr": "Profil kaydırmalı dış çiftte çalışma kavrama açısı",
+      "family": "gear_pair",
+      "kind": "formula",
+      "status": "CANDIDATE",
+      "confidence": "single_tested_implementation+engine_consistent",
+      "display": "inv α_wt = inv α_t + 2·tan α_n·(x1 + x2)/(z1 + z2)",
+      "iso_citation": "ISO 21771:2007 5.2.4 (involute relation); no DAYANERA evidence requirement anchors it yet",
+      "engine": [],
+      "supporting_repositories": [
+        "freecad.gears"
+      ],
+      "conflicts": 0,
+      "engine_cases": 0,
+      "engine_max_rel_error": 0.0
+    },
+    {
+      "id": "gear.pair.working_centre_distance",
+      "name": "Working centre distance",
+      "name_tr": "Çalışma eksen mesafesi",
+      "family": "gear_pair",
+      "kind": "formula",
+      "status": "CANDIDATE",
+      "confidence": "single_tested_implementation+engine_consistent",
+      "display": "a_w = a·cos α_t / cos α_wt",
+      "iso_citation": "ISO 21771:2007 5.2.4 (inverse of Eq. (54)); anchored only through the engine round trip",
+      "engine": [],
+      "supporting_repositories": [
+        "freecad.gears"
+      ],
+      "conflicts": 0,
+      "engine_cases": 0,
+      "engine_max_rel_error": 0.0
+    },
+    {
+      "id": "gear.pair.reference_centre_distance",
+      "name": "Reference centre distance",
+      "name_tr": "Referans eksen mesafesi",
+      "family": "gear_pair",
+      "kind": "formula",
+      "status": "CANDIDATE",
+      "confidence": "single_tested_implementation+engine_consistent",
+      "display": "a = (d1 + d2)/2 = m_n(z1 + z2)/(2 cos β)",
+      "iso_citation": "ISO 21771:2007 (sum of reference radii); no DAYANERA evidence requirement anchors it yet",
+      "engine": [],
+      "supporting_repositories": [
+        "freecad.gears"
+      ],
+      "conflicts": 0,
+      "engine_cases": 0,
+      "engine_max_rel_error": 0.0
+    },
+    {
+      "id": "gear.internal.working_pressure_angle_profile_shift",
+      "name": "Working pressure angle of a profile-shifted internal pair",
+      "name_tr": "Profil kaydırmalı iç çiftte çalışma kavrama açısı",
+      "family": "internal_pair",
+      "kind": "formula",
+      "status": "CANDIDATE",
+      "confidence": "single_tested_implementation",
+      "display": "inv α_w = inv α + 2·tan α·(x2 − x1)/(z2 − z1)  (z2 = ring)",
+      "iso_citation": "not anchored in the DAYANERA corpus",
+      "engine": [],
+      "supporting_repositories": [
+        "freecad.gears"
+      ],
+      "conflicts": 0,
+      "engine_cases": 0,
+      "engine_max_rel_error": 0.0
+    },
+    {
+      "id": "gear.internal.working_centre_distance",
+      "name": "Working centre distance of an internal pair",
+      "name_tr": "İç çiftte çalışma eksen mesafesi",
+      "family": "internal_pair",
+      "kind": "formula",
+      "status": "CANDIDATE",
+      "confidence": "single_tested_implementation",
+      "display": "a_w = m(z2 − z1)/2 · cos α / cos α_w",
+      "iso_citation": "not anchored in the DAYANERA corpus",
+      "engine": [],
+      "supporting_repositories": [
+        "freecad.gears"
+      ],
+      "conflicts": 0,
+      "engine_cases": 0,
+      "engine_max_rel_error": 0.0
+    },
+    {
+      "id": "gear.helical.twist_angle",
+      "name": "Twist of the transverse section over the facewidth",
+      "name_tr": "Diş genişliği boyunca alın kesiti dönmesi",
+      "family": "helical",
+      "kind": "formula",
+      "status": "CANDIDATE",
+      "confidence": "multiple_independent_implementations",
+      "display": "φ = 2·b·tan β / d = 2π·b / p_z",
+      "iso_citation": "helix geometry (lead p_z = π·d / tan β); no DAYANERA evidence requirement anchors it yet",
+      "engine": [],
+      "supporting_repositories": [
+        "bd_warehouse",
+        "cq_gears",
+        "freecad.gears"
+      ],
+      "conflicts": 0,
+      "engine_cases": 0,
+      "engine_max_rel_error": 0.0
+    },
+    {
+      "id": "gear.helical.lead",
+      "name": "Lead of a helical gear",
+      "name_tr": "Helisel dişlinin hatvesi",
+      "family": "helical",
+      "kind": "formula",
+      "status": "CANDIDATE",
+      "confidence": "single_tested_implementation",
+      "display": "p_z = π·d / tan β",
+      "iso_citation": "ISO 21771:2007 (lead); no DAYANERA evidence requirement anchors it yet",
+      "engine": [],
+      "supporting_repositories": [
+        "bd_warehouse"
+      ],
+      "conflicts": 0,
+      "engine_cases": 0,
+      "engine_max_rel_error": 0.0
+    },
+    {
+      "id": "gear.cyl.transverse_tooth_thickness",
+      "name": "Transverse tooth thickness at the reference circle",
+      "name_tr": "Referans dairede alın diş kalınlığı",
+      "family": "tooth_thickness",
+      "kind": "formula",
+      "status": "CANDIDATE",
+      "confidence": "multiple_independent_implementations",
+      "display": "s_t = m_t(π/2 + 2·x·cos β·tan α_t)   (zero backlash)",
+      "iso_citation": "ISO 21771:2007 (tooth thickness); no DAYANERA evidence requirement anchors it yet",
+      "engine": [],
+      "supporting_repositories": [
+        "cq_gears",
+        "freecad.gears"
+      ],
+      "conflicts": 0,
+      "engine_cases": 0,
+      "engine_max_rel_error": 0.0
+    },
+    {
+      "id": "gear.cyl.normal_tooth_thickness",
+      "name": "Normal tooth thickness at the reference cylinder",
+      "name_tr": "Referans silindirde normal diş kalınlığı",
+      "family": "tooth_thickness",
+      "kind": "formula",
+      "status": "CANDIDATE",
+      "confidence": "derived_from_verified_rules",
+      "display": "s_n = m_n(π/2 + 2·x·tan α_n) = s_t·cos β",
+      "iso_citation": "ISO 21771:2007 (tooth thickness); no DAYANERA evidence requirement anchors it yet",
+      "engine": [],
+      "supporting_repositories": [],
+      "conflicts": 0,
+      "engine_cases": 0,
+      "engine_max_rel_error": 0.0
+    },
+    {
+      "id": "gear.cyl.tooth_thickness_at_diameter",
+      "name": "Transverse tooth thickness at any diameter",
+      "name_tr": "Herhangi bir çapta alın diş kalınlığı",
+      "family": "tooth_thickness",
+      "kind": "formula",
+      "status": "CANDIDATE",
+      "confidence": "single_tested_implementation",
+      "display": "s_yt = d_y·(s_t/d + inv α_t − inv α_yt),  cos α_yt = d_b / d_y",
+      "iso_citation": "ISO 21771:2007 (tooth thickness at a diameter); no DAYANERA evidence requirement anchors it yet",
+      "engine": [],
+      "supporting_repositories": [
+        "cq_gears"
+      ],
+      "conflicts": 0,
+      "engine_cases": 0,
+      "engine_max_rel_error": 0.0
+    },
+    {
+      "id": "gear.cyl.non_involute_root_flank",
+      "name": "Base circle above the root circle (non-involute root flank)",
+      "name_tr": "Temel dairenin diş dibi dairesinin üstünde kalması",
+      "family": "tip_root_diameter",
+      "kind": "sign_condition",
+      "status": "CANDIDATE",
+      "confidence": "multiple_independent_implementations",
+      "display": "d_b > d_f ⇒ the flank between d_f and d_b is not an involute (fillet/trochoid)",
+      "iso_citation": "geometric consequence of Eq. (19) and Eq. (34); not an ISO formula",
+      "engine": [],
+      "supporting_repositories": [
+        "cq_gears",
+        "freecad.gears"
+      ],
+      "conflicts": 0,
+      "engine_cases": 0,
+      "engine_max_rel_error": 0.0
+    },
+    {
+      "id": "gear.planetary.ring_teeth",
+      "name": "Ring tooth count of a simple planetary set",
+      "name_tr": "Basit planet dişli takımında halka diş sayısı",
+      "family": "planetary",
+      "kind": "formula",
+      "status": "CANDIDATE",
+      "confidence": "multiple_independent_implementations",
+      "display": "z_ring = z_sun + 2·z_planet (same module, no profile shift)",
+      "iso_citation": "not anchored in the DAYANERA corpus",
+      "engine": [],
+      "supporting_repositories": [
+        "cq_gears",
+        "freecad.gears"
+      ],
+      "conflicts": 0,
+      "engine_cases": 0,
+      "engine_max_rel_error": 0.0
+    },
+    {
+      "id": "gear.planetary.assembly_condition",
+      "name": "Assembly condition for equally spaced planets",
+      "name_tr": "Eşit aralıklı planetler için montaj koşulu",
+      "family": "planetary",
+      "kind": "zero_condition",
+      "status": "CANDIDATE",
+      "confidence": "single_tested_implementation",
+      "display": "(z_sun + z_ring) / n_p must be an integer",
+      "iso_citation": "not anchored in the DAYANERA corpus",
+      "engine": [],
+      "supporting_repositories": [
+        "freecad.gears"
+      ],
+      "conflicts": 1,
+      "engine_cases": 0,
+      "engine_max_rel_error": 0.0
+    },
+    {
+      "id": "gear.planetary.ratio_ring_fixed",
+      "name": "Planetary ratio with the ring fixed",
+      "name_tr": "Halka sabitken planet oranı",
+      "family": "planetary",
+      "kind": "formula",
+      "status": "CANDIDATE",
+      "confidence": "single_tested_implementation",
+      "display": "i = 1 + z_ring / z_sun (sun input, carrier output)",
+      "iso_citation": "not anchored in the DAYANERA corpus",
+      "engine": [],
+      "supporting_repositories": [
+        "freecad.gears"
+      ],
+      "conflicts": 0,
+      "engine_cases": 0,
+      "engine_max_rel_error": 0.0
+    },
+    {
+      "id": "gear.planetary.ring_phase_cad_convention",
+      "name": "Ring phase angle used by a CAD generator",
+      "name_tr": "CAD üretecinin halka faz açısı",
+      "family": "planetary",
+      "kind": "formula",
+      "status": "UNVERIFIED",
+      "confidence": "implementation_convention",
+      "display": "ring phase = 180°·(z_planet + 1)/z_ring",
+      "iso_citation": "none: depends on the tooth orientation of the freecad.gears profiles",
+      "engine": [],
+      "supporting_repositories": [
+        "freecad.gears"
+      ],
+      "conflicts": 0,
+      "engine_cases": 0,
+      "engine_max_rel_error": 0.0
+    },
+    {
+      "id": "gear.worm.lead_angle",
+      "name": "Worm lead angle",
+      "name_tr": "Sonsuz vida helis (hatve) açısı",
+      "family": "worm",
+      "kind": "formula",
+      "status": "CANDIDATE",
+      "confidence": "multiple_independent_implementations",
+      "display": "tan γ = z_1·m / d_1 = z_1 / q",
+      "iso_citation": "not anchored in the DAYANERA corpus",
+      "engine": [],
+      "supporting_repositories": [
+        "bd_warehouse",
+        "cq_gears",
+        "freecad.gears"
+      ],
+      "conflicts": 0,
+      "engine_cases": 0,
+      "engine_max_rel_error": 0.0
+    },
+    {
+      "id": "gear.worm.lead",
+      "name": "Worm lead",
+      "name_tr": "Sonsuz vida hatvesi",
+      "family": "worm",
+      "kind": "formula",
+      "status": "CANDIDATE",
+      "confidence": "multiple_independent_implementations",
+      "display": "p_z1 = π·m·z_1",
+      "iso_citation": "not anchored in the DAYANERA corpus",
+      "engine": [],
+      "supporting_repositories": [
+        "bd_warehouse",
+        "cq_gears"
+      ],
+      "conflicts": 0,
+      "engine_cases": 0,
+      "engine_max_rel_error": 0.0
+    },
+    {
+      "id": "gear.involute.derivative_claim_freecad_gears",
+      "name": "Derivative of the involute function used as a Newton step",
+      "name_tr": "Evolvent fonksiyonunun türevi (Newton adımı)",
+      "family": "involute",
+      "kind": "derivative_claim",
+      "status": "REJECTED",
+      "confidence": "failed_mathematical_check",
+      "display": "claimed: d(inv α)/dα = 1/cos α − 1   (true: tan² α)",
+      "iso_citation": "calculus identity check (d/dα (tan α − α) = tan² α)",
+      "engine": [],
+      "supporting_repositories": [],
+      "conflicts": 1,
+      "engine_cases": 0,
+      "engine_max_rel_error": 0.0
+    }
+  ],
+  "conflicts": [
+    {
+      "id": "conflict:gear.cyl.transverse_pressure_angle:cq_gears:CrossedHelicalGear.__init__:at0",
+      "rule_id": "gear.cyl.transverse_pressure_angle",
+      "rule_status": "VERIFIED",
+      "repo": "cq_gears",
+      "file": "cq_gears/crossed_helical_gear.py",
+      "symbol": "CrossedHelicalGear.__init__",
+      "target": "at0",
+      "line": 40,
+      "commit": "e73874cf17a25447a99b1e7c22a4d5af38560e9c",
+      "license": "Apache-2.0",
+      "max_rel_error": 0.027219663211194678,
+      "counterexample": {
+        "inputs": {
+          "alpha_n": 20.0,
+          "beta": 0.0
+        },
+        "expected": 0.3490658503988659,
+        "observed": 0.3358423725664079
+      },
+      "suspected_error_class": "DEGREE_RADIAN_ERROR",
+      "permalink": "https://github.com/meadiode/cq_gears/blob/e73874cf17a25447a99b1e7c22a4d5af38560e9c/cq_gears/crossed_helical_gear.py#L40"
+    },
+    {
+      "id": "conflict:gear.cyl.base_diameter:cq_gears:CrossedHelicalGear.__init__:self.rb",
+      "rule_id": "gear.cyl.base_diameter",
+      "rule_status": "VERIFIED",
+      "repo": "cq_gears",
+      "file": "cq_gears/crossed_helical_gear.py",
+      "symbol": "CrossedHelicalGear.__init__",
+      "target": "self.rb",
+      "line": 53,
+      "commit": "e73874cf17a25447a99b1e7c22a4d5af38560e9c",
+      "license": "Apache-2.0",
+      "max_rel_error": 0.014284068790218157,
+      "counterexample": {
+        "inputs": {
+          "alpha_n": 20.0,
+          "alpha_t": 20.0,
+          "beta": 0.0,
+          "d": 17.0,
+          "m_t": 1.0,
+          "z": 17.0
+        },
+        "expected": 15.974774553360444,
+        "observed": 16.05026148387525
+      },
+      "suspected_error_class": "DEGREE_RADIAN_ERROR",
+      "permalink": "https://github.com/meadiode/cq_gears/blob/e73874cf17a25447a99b1e7c22a4d5af38560e9c/cq_gears/crossed_helical_gear.py#L53"
+    },
+    {
+      "id": "conflict:gear.cyl.addendum:cq_gears:CrossedHelicalGear.__init__:adn",
+      "rule_id": "gear.cyl.addendum",
+      "rule_status": "VERIFIED",
+      "repo": "cq_gears",
+      "file": "cq_gears/crossed_helical_gear.py",
+      "symbol": "CrossedHelicalGear.__init__",
+      "target": "adn",
+      "line": 44,
+      "commit": "e73874cf17a25447a99b1e7c22a4d5af38560e9c",
+      "license": "Apache-2.0",
+      "max_rel_error": 0.15470053837925146,
+      "counterexample": {
+        "inputs": {
+          "h_aP_star": 1.0,
+          "k": 0.0,
+          "m_n": 1.0,
+          "m_t": 1.03527618,
+          "x": 0.0
+        },
+        "expected": 1.0,
+        "observed": 1.035276180410083
+      },
+      "suspected_error_class": "NORMAL_TRANSVERSE_CONFUSION",
+      "permalink": "https://github.com/meadiode/cq_gears/blob/e73874cf17a25447a99b1e7c22a4d5af38560e9c/cq_gears/crossed_helical_gear.py#L44"
+    },
+    {
+      "id": "conflict:gear.cyl.dedendum:cq_gears:CrossedHelicalGear.__init__:ddn",
+      "rule_id": "gear.cyl.dedendum",
+      "rule_status": "VERIFIED",
+      "repo": "cq_gears",
+      "file": "cq_gears/crossed_helical_gear.py",
+      "symbol": "CrossedHelicalGear.__init__",
+      "target": "ddn",
+      "line": 45,
+      "commit": "e73874cf17a25447a99b1e7c22a4d5af38560e9c",
+      "license": "Apache-2.0",
+      "max_rel_error": 0.15470053837925146,
+      "counterexample": {
+        "inputs": {
+          "h_fP_star": 1.25,
+          "m_n": 1.0,
+          "m_t": 1.03527618,
+          "x": 0.0
+        },
+        "expected": 1.25,
+        "observed": 1.2940952255126037
+      },
+      "suspected_error_class": "NORMAL_TRANSVERSE_CONFUSION",
+      "permalink": "https://github.com/meadiode/cq_gears/blob/e73874cf17a25447a99b1e7c22a4d5af38560e9c/cq_gears/crossed_helical_gear.py#L45"
+    },
+    {
+      "id": "conflict:gear.cyl.tip_diameter:cq_gears:CrossedHelicalGear.__init__:da",
+      "rule_id": "gear.cyl.tip_diameter",
+      "rule_status": "VERIFIED",
+      "repo": "cq_gears",
+      "file": "cq_gears/crossed_helical_gear.py",
+      "symbol": "CrossedHelicalGear.__init__",
+      "target": "da",
+      "line": 46,
+      "commit": "e73874cf17a25447a99b1e7c22a4d5af38560e9c",
+      "license": "Apache-2.0",
+      "max_rel_error": 0.014304316979690047,
+      "counterexample": {
+        "inputs": {
+          "d": 17.599695067,
+          "h_aP_star": 1.0,
+          "k": 0.0,
+          "m_n": 1.0,
+          "m_t": 1.03527618,
+          "x": 0.0,
+          "z": 17.0
+        },
+        "expected": 19.59969506697141,
+        "observed": 19.670247427791576
+      },
+      "suspected_error_class": "NORMAL_TRANSVERSE_CONFUSION",
+      "permalink": "https://github.com/meadiode/cq_gears/blob/e73874cf17a25447a99b1e7c22a4d5af38560e9c/cq_gears/crossed_helical_gear.py#L46"
+    },
+    {
+      "id": "conflict:gear.cyl.root_diameter:cq_gears:CrossedHelicalGear.__init__:dd",
+      "rule_id": "gear.cyl.root_diameter",
+      "rule_status": "VERIFIED",
+      "repo": "cq_gears",
+      "file": "cq_gears/crossed_helical_gear.py",
+      "symbol": "CrossedHelicalGear.__init__",
+      "target": "dd",
+      "line": 47,
+      "commit": "e73874cf17a25447a99b1e7c22a4d5af38560e9c",
+      "license": "Apache-2.0",
+      "max_rel_error": 0.022577547989673735,
+      "counterexample": {
+        "inputs": {
+          "d": 17.599695067,
+          "h_fP_star": 1.25,
+          "m_n": 1.0,
+          "m_t": 1.03527618,
+          "x": 0.0,
+          "z": 17.0
+        },
+        "expected": 15.09969506697141,
+        "observed": 15.011504615946203
+      },
+      "suspected_error_class": "NORMAL_TRANSVERSE_CONFUSION",
+      "permalink": "https://github.com/meadiode/cq_gears/blob/e73874cf17a25447a99b1e7c22a4d5af38560e9c/cq_gears/crossed_helical_gear.py#L47"
+    },
+    {
+      "id": "conflict:gear.rack.iso53_basic_rack:freecad.gears:InvoluteTooth.__init__:arg:clearance",
+      "rule_id": "gear.rack.iso53_basic_rack",
+      "rule_status": "VERIFIED",
+      "repo": "freecad.gears",
+      "file": "pygears/involute_tooth.py",
+      "symbol": "InvoluteTooth.__init__",
+      "target": "arg:clearance",
+      "line": 52,
+      "commit": "83ec154b1925347622b61812f75d2ed51e956b9f",
+      "license": "GPL-3.0",
+      "max_rel_error": 0.13,
+      "counterexample": {
+        "constant": "c_P_star",
+        "expected": 0.25,
+        "observed": 0.12
+      },
+      "suspected_error_class": null,
+      "permalink": "https://github.com/looooo/freecad.gears/blob/83ec154b1925347622b61812f75d2ed51e956b9f/pygears/involute_tooth.py#L52"
+    },
+    {
+      "id": "conflict:gear.rack.iso53_basic_rack:FreeCAD:CreateExternalGear:arg:filletCoeff",
+      "rule_id": "gear.rack.iso53_basic_rack",
+      "rule_status": "VERIFIED",
+      "repo": "FreeCAD",
+      "file": "src/Mod/PartDesign/fcgear/involute.py",
+      "symbol": "CreateExternalGear",
+      "target": "arg:filletCoeff",
+      "line": 33,
+      "commit": "dc53a2036d878a6e4a0eaa9bab98c1d3dae168ee",
+      "license": "LGPL-2.1",
+      "max_rel_error": 0.0050000000000000044,
+      "counterexample": {
+        "constant": "rho_fP_star",
+        "expected": 0.38,
+        "observed": 0.375
+      },
+      "suspected_error_class": null,
+      "permalink": "https://github.com/FreeCAD/FreeCAD/blob/dc53a2036d878a6e4a0eaa9bab98c1d3dae168ee/src/Mod/PartDesign/fcgear/involute.py#L33"
+    },
+    {
+      "id": "conflict:gear.planetary.assembly_condition:cq_gears:PlanetaryGearset.__init__:if:(sun_teeth_number + planet_teeth_number) % n_planets",
+      "rule_id": "gear.planetary.assembly_condition",
+      "rule_status": "CANDIDATE",
+      "repo": "cq_gears",
+      "file": "cq_gears/ring_gear.py",
+      "symbol": "PlanetaryGearset.__init__",
+      "target": "if:(sun_teeth_number + planet_teeth_number) % n_planets",
+      "line": 282,
+      "commit": "e73874cf17a25447a99b1e7c22a4d5af38560e9c",
+      "license": "Apache-2.0",
+      "max_rel_error": 1.0,
+      "counterexample": {
+        "inputs": {
+          "n_p": 2.0,
+          "z_planet": 12.0,
+          "z_ring": 37.0,
+          "z_sun": 13.0
+        },
+        "expected": 0.0,
+        "observed": 1.0
+      },
+      "suspected_error_class": null,
+      "permalink": "https://github.com/meadiode/cq_gears/blob/e73874cf17a25447a99b1e7c22a4d5af38560e9c/cq_gears/ring_gear.py#L282"
+    },
+    {
+      "id": "conflict:gear.involute.derivative_claim_freecad_gears:freecad.gears:compute_shifted_gears.d_root_inv:return",
+      "rule_id": "gear.involute.derivative_claim_freecad_gears",
+      "rule_status": "REJECTED",
+      "repo": "freecad.gears",
+      "file": "pygears/computation.py",
+      "symbol": "compute_shifted_gears.d_root_inv",
+      "target": "return",
+      "line": 48,
+      "commit": "83ec154b1925347622b61812f75d2ed51e956b9f",
+      "license": "GPL-3.0",
+      "max_rel_error": 0.0,
+      "counterexample": {
+        "alpha": 60.0,
+        "claimed": 0.9999999999999996,
+        "numeric": 2.9999999997759024
+      },
+      "suspected_error_class": null,
+      "permalink": "https://github.com/looooo/freecad.gears/blob/83ec154b1925347622b61812f75d2ed51e956b9f/pygears/computation.py#L48"
+    }
+  ]
+}

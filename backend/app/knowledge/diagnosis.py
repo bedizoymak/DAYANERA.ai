@@ -175,6 +175,10 @@ def _hyps_iso1328(key: str) -> list[Hyp]:
     ]
 
 
+def _no_hypotheses(_key: str) -> list[Hyp]:
+    return []
+
+
 def _generic(unit: str) -> list[tuple[str, str, Callable[[float], float]]]:
     out: list[tuple[str, str, Callable[[float], float]]] = []
     if unit == "°":
@@ -265,7 +269,7 @@ def diagnose(calc_type: str, canonical_inputs: dict[str, float], outputs: list[d
         hyps = _hyps_iso1328
     else:
         v = dict(inp)
-        hyps = lambda _k: []  # noqa: E731 - table lookups: only the generic hypotheses apply
+        hyps = _no_hypotheses  # table lookups: only the generic hypotheses apply
     by_key = {o["key"]: o for o in outputs}
     for o in outputs:
         if o.get("unrounded") is not None:

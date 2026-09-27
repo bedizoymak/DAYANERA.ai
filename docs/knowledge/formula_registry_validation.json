@@ -1099,7 +1099,7 @@
       "line": 48,
       "commit": "83ec154b1925347622b61812f75d2ed51e956b9f",
       "license": "GPL-3.0",
-      "max_rel_error": 0.0,
+      "max_rel_error": 0.6666666666417671,
       "counterexample": {
         "alpha": 60.0,
         "claimed": 0.9999999999999996,

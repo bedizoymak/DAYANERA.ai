@@ -92,7 +92,14 @@ def _iso1328_cases() -> list[dict[str, Any]]:
             for a, mn, d, b in itertools.product((1, 4, 6, 8, 11), (0.5, 2.0, 10.0), (10.0, 150.0, 2000.0), (10.0, 100.0))]
 
 
+def _transverse_module_cases() -> list[dict[str, Any]]:
+    return [{"m_n": mn, "beta": b, "_group": "helical" if b else "spur"}
+            for mn, b in itertools.product((0.5, 1.0, 2.0, 3.0, 8.0), (0.0, 10.0, 15.0, 20.0, 25.0, 30.0, 45.0))]
+
+
 def cases_for(calc_type: str, family: str) -> list[dict[str, Any]]:
+    if calc_type == "transverse_module":
+        return _transverse_module_cases()
     if calc_type == "cylindrical_gear_geometry":
         return _cylindrical_cases(with_k=family in ("tooth_depth", "tip_root_diameter"))
     if calc_type == "gear_pair":
@@ -209,6 +216,8 @@ def run_regression(spec: CorrectionSpec, resolver: EvidenceResolver) -> Regressi
         # 2. invariants on engine outputs
         eng_env = {**_registry_env(spec.calc_type, case), **outs}
         for inv in spec.invariants:
+            if not (expr.names(inv["expr"]) | expr.names(inv["scale"])) <= eng_env.keys():
+                continue  # the relation needs quantities this calc type does not compute (e.g. α for m_t alone)
             res.checks += 1
             try:
                 value = expr.evaluate(inv["expr"], eng_env)

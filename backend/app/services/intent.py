@@ -60,6 +60,33 @@ def is_inventory_question(text: str) -> bool:
     return not re.search(r"\d", "".join(rest))
 
 
+# --- lookup vs. numeric calculation ------------------------------------------
+# References to a standard or to a part of it ("ISO 53:1998", "Table 2", "Eşitlik (1)",
+# "Test 9B") carry digits that are NOT calculation inputs.
+_STANDARD_REF = re.compile(
+    r"\b(?:ISO|DIN|(?-i:EN)|BS)(?:\s*/\s*T[RS])?\s*\d{2,5}(?:-\d{1,2})?(?::\s*\d{4})?"  # not Turkish "en 20 mm"
+    r"|\b(?:table|tablo|figure|şekil|equation|eşitlik|denklem|formula|formül|clause|madde|"
+    r"test|grade|class|sınıf|type|tip|note|not)\b\s*\(?\s*\d+(?:\.\d+)*[A-Za-z]?\s*\)?",
+    re.IGNORECASE | re.UNICODE)
+# "how is X calculated / what is the formula": the relation is asked, not a number
+FORMULA_RE = re.compile(
+    r"(nasıl\s+(?:hesaplan|bulun|belirlen|elde\s+edil|tanımlan|ifade\s+edil)\w*"
+    r"|formül\w*|bağıntı\w*|denklem\w*|eşitliğ\w*|eşitlik\w*"
+    r"|\bhow\s+(?:is|are|do\s+you|to)\b.*\b(?:calculat|determin|comput|defin)\w*"
+    r"|\b(?:formula|equation|relation(?:ship)?)s?\b)",
+    re.IGNORECASE | re.UNICODE)
+# "maksimum / minimum / aralık / range": answer from ALL rows of the entity, not the first one
+RANGE_RE = re.compile(
+    r"(maksimum|minimum|\bmaks\.?\b|\bmax(?:imum)?\b|\bmin(?:imum)?\b|en\s+(?:büyük|yüksek|küçük|düşük)"
+    r"|aralı[kğ]\w*|\brange\w*|üst\s+sınır\w*|alt\s+sınır\w*|sınır\s+değer\w*|\blimits?\b)",
+    re.IGNORECASE | re.UNICODE)
+
+
+def has_parameter_digits(text: str) -> bool:
+    """True when a digit remains after removing standard / table / figure references."""
+    return bool(re.search(r"\d", _STANDARD_REF.sub(" ", text)))
+
+
 @dataclass
 class Intent:
     kind: str  # sources_only | memory_command | note_command | corpus_inventory | calculation | technical | general
@@ -69,6 +96,17 @@ class Intent:
     note_text: str | None = None
     calc: ParsedCalc | None = None
     question: str = ""
+    # routing detail for calculation / technical messages:
+    # numeric_calculation | standards_formula_lookup | standards_range_lookup | standards_value_lookup
+    subtype: str | None = None
+
+
+def _lookup_subtype(question: str) -> str:
+    if FORMULA_RE.search(question):
+        return "standards_formula_lookup"
+    if RANGE_RE.search(question):
+        return "standards_range_lookup"
+    return "standards_value_lookup"
 
 
 def classify(message: str) -> Intent:
@@ -92,9 +130,15 @@ def classify(message: str) -> Intent:
     calc = parse_calculation(question)
     technical = has_technical_terms(question)
     if calc.calc_type and (calc.has_calc_verb or "=" in question or calc.calc_type in TABLE_LOOKUPS):
-        return Intent("calculation", wants_sources, wants_detail, calc=calc, question=question)
-    if calc.has_calc_verb and technical and re.search(r"\d", question):
-        return Intent("calculation", wants_sources, wants_detail, calc=calc, question=question)
+        return Intent("calculation", wants_sources, wants_detail, calc=calc, question=question,
+                      subtype="numeric_calculation")
+    # A formula question without any numeric input ("d nasıl hesaplanır?") is a source lookup:
+    # it must never reach the engine's input validation / range checks.
+    formula_only = bool(FORMULA_RE.search(question)) and not calc.inputs
+    if calc.has_calc_verb and technical and not formula_only and has_parameter_digits(question):
+        return Intent("calculation", wants_sources, wants_detail, calc=calc, question=question,
+                      subtype="numeric_calculation")
     if technical:
-        return Intent("technical", wants_sources, wants_detail, calc=calc, question=question)
+        return Intent("technical", wants_sources, wants_detail, calc=calc, question=question,
+                      subtype=_lookup_subtype(question))
     return Intent("general", wants_sources, wants_detail, question=question)

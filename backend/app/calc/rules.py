@@ -194,6 +194,32 @@ class CylindricalGearGeometry(Rule):
 
 
 # ---------------------------------------------------------------------------
+class TransverseModule(Rule):
+    """m_t = m_n / cos β on its own: the number of teeth is not part of the relation."""
+
+    calc_type = "transverse_module"
+    title = "Alın modülü m_t (ISO 21771:2007 Eş. 2)"
+    description = (
+        "Helisel dişli için alın modülü (transverse module) m_t = m_n / cos β. Yalnızca normal modül m_n ve "
+        "helis açısı β (derece) gerekir; diş sayısı gerekmez."
+    )
+    inputs = (
+        InputSpec("m_n", "Normal modül m_n (normal module)", "length", True, 1e-6, 1e5),
+        InputSpec("beta", "Helis açısı β (helix angle), derece", "angle", True, 0.0, 89.0),
+    )
+
+    def evidence_ids(self, provided, values):
+        return ["iso21771.eq2"]
+
+    def compute(self, ctx):
+        mn, beta = ctx.values["m_n"], ctx.values["beta"]  # beta is canonical degrees (units.to_canonical)
+        mt = mn / math.cos(math.radians(beta))
+        ctx.assumptions.append("β derece (°) olarak alındı; cos β için radyana çevrildi.")
+        ctx.trace.append(f"m_t = m_n / cos β = {fmt_num(mn)} / cos {fmt_num(beta)}° = {fmt_num(mt)} mm")
+        return [_out("m_t", "Alın modülü m_t (transverse module)", mt, "mm", "ISO21771:2007 Eş.(2)", "m_t = m_n / cos β")]
+
+
+# ---------------------------------------------------------------------------
 class GearPair(Rule):
     calc_type = "gear_pair"
     title = "Dişli çifti: oran ve çalışma kavrama açısı (ISO 21771)"
@@ -492,6 +518,6 @@ class Iso286ShaftH(_Iso286BasicClass):
 
 
 RULES: dict[str, Rule] = {r.calc_type: r for r in (
-    CylindricalGearGeometry(), GearPair(), Iso1328FlankTolerance(), Iso286StandardTolerance(),
+    CylindricalGearGeometry(), TransverseModule(), GearPair(), Iso1328FlankTolerance(), Iso286StandardTolerance(),
     Iso286HoleH(), Iso286ShaftH(),
 )}

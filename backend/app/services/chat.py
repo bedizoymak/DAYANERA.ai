@@ -34,7 +34,7 @@ from app.db.models import (
 from app.db.session import session_scope
 from app.domain.enums import REFUSAL_PHRASE
 from app.inference.base import ChatMessage, GenerationOptions, LLMProvider, ProviderError
-from app.inference.prompts import general_messages, summary_messages, verified_messages
+from app.inference.prompts import CODE_RULE, RANGE_RULE, general_messages, summary_messages, verified_messages
 from app.services import audit, memory
 from app.services.access import can_view_document, load_scopes
 from app.services.auth import AuthenticatedUser
@@ -52,7 +52,7 @@ from app.services.grounding import validate_answer
 from app.services.intent import Intent, classify
 from app.services.inventory import active_corpus_codes, format_inventory, list_active_documents, missing_codes
 from app.services.notes import NotesService
-from app.services.retrieval import Passage, plan_query, search
+from app.services.retrieval import Passage, label_lines, plan_query, search
 from app.services.serialize import message_to_dict
 
 log = logging.getLogger(__name__)
@@ -343,7 +343,8 @@ class ChatService:
                                 "standard_code": ev["standard_code"], "version_number": ev["version_number"],
                                 "confidence_status": ev["confidence_status"], "cited": True})
             metadata = {"calculation_id": str(calc.id), "calc_type": calc_type, "calc_status": result.status,
-                        "mismatch": calc.mismatch, "detail_open": intent.wants_detail, "mapping": mapping}
+                        "mismatch": calc.mismatch, "detail_open": intent.wants_detail, "mapping": mapping,
+                        "intent_subtype": intent.subtype}
             if result.status == "refused":
                 refusal = self._refusal_meta(user, intent.question, "calculation_refused",
                                              active_corpus_codes(db, scopes))
@@ -401,7 +402,8 @@ class ChatService:
                 plan = plan_query(intent.question, context=prev_q)
                 passages = search(db, scopes, plan, top_k=self.settings.retrieval_top_k, min_coverage=min_cov)
         timings["retrieval"] = ms(t0)
-        plan_info = {"concepts": plan.concepts, "codes": plan.codes, "literals": plan.literals}
+        plan_info = {"concepts": plan.concepts, "codes": plan.codes, "literals": plan.literals,
+                     "symbols": plan.symbols, "labels": plan.labels, "intent_subtype": intent.subtype}
         if not passages:
             timings["total"] = ms(t_start)
             yield {"event": "assistant_message",
@@ -433,10 +435,17 @@ class ChatService:
         pdicts = [{"standard_code": p.standard_code, "title": p.document_title, "locator": p.locator, "text": p.text}
                   for p in used]
         t0 = time.perf_counter()
+        extra_rules = []
+        if plan.symbols or plan.labels:  # "αP", "Class FD": quote what the source ties to that exact code
+            extra_rules.append(CODE_RULE)
+        if intent.subtype == "standards_range_lookup":  # all rows of the entity, not the first one
+            extra_rules.append(RANGE_RULE)
         try:
             res = self.provider.chat(
                 _msgs(verified_messages(intent.question, pdicts, intent.wants_detail,
-                                        prev_q if prev_q and len(intent.question) < 60 else None)),
+                                        prev_q if prev_q and len(intent.question) < 60 else None,
+                                        extra_rules=extra_rules,
+                                        label_lines=label_lines(plan, [p.text for p in used]))),
                 # Order C.3: short answers are capped at 250 tokens (detail mode keeps 900)
                 GenerationOptions(temperature=0.1, num_predict=900 if intent.wants_detail else 250))
         except ProviderError as exc:

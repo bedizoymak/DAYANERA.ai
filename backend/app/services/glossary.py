@@ -69,7 +69,7 @@ GLOSSARY: dict[str, list[str]] = {
     "salgı": ["runout"],
     "sapma": ["deviation"],
     "tolerans sınıfı": ["tolerance class", "flank tolerance class"],
-    "kalite sınıfı": ["tolerance class", "accuracy grade"],
+    "kalite sınıfı": ["tolerance class", "accuracy grade", "quality grade", "grade"],
     "tolerans": ["tolerance"],
     "yanak": ["flank"],
     "diş yanağı": ["tooth flank", "flank"],
@@ -273,6 +273,18 @@ QUESTION_WORDS = {
     "with", "by", "be", "does", "do", "according", "value", "values", "give", "tell", "me",
     "tanım", "tanımı", "tanımla", "ilişki", "ilişkisi", "sonra", "sonrası", "önce", "öncesi",
     "durum", "durumu", "durumunda", "nedeniyle", "türleri", "çeşitleri",
+    # Turkish words written without Turkish letters look like English words ("neyi", "temsil",
+    # "eder"); they must never become English search concepts or required literals.
+    "neyi", "neyin", "neye", "temsil", "temsilen", "anlama", "anlamı", "anlamına", "anlamina", "gelir",
+    "demek", "demektir", "belirtir", "gösterir", "olduğu", "olduğunu", "oldugu", "değerini", "değerine",
+    "bağıntı", "bağıntısı", "bağıntısını", "kullanarak", "hesaplanıyor",
+    "ler", "lar", "leri", "ları", "lerin", "ların", "lere", "lara", "yle", "yla", "nde", "nda",
+}
+# Greek symbol names typed in ASCII; retrieval matches them against the Greek letter too
+GREEK_NAMES: dict[str, str] = {
+    "alpha": "α", "alfa": "α", "beta": "β", "gamma": "γ", "delta": "δ", "epsilon": "ε", "zeta": "ζ", "eta": "η",
+    "theta": "θ", "lambda": "λ", "mu": "μ", "nu": "ν", "xi": "ξ", "rho": "ρ", "sigma": "σ", "tau": "τ",
+    "phi": "φ", "psi": "ψ", "omega": "ω",
 }
 
 # Scoring-only aliases for generic Turkish words (Order C relevance gate). They are
@@ -280,6 +292,12 @@ QUESTION_WORDS = {
 SCORING_ALIASES: dict[str, list[str]] = {
     "sınıf": ["class", "grade"], "tür": ["type"], "çeşit": ["type", "kind"], "hız": ["speed", "velocity"],
     "kesme": ["cutting"], "kuvvet": ["force"], "değişken": ["variable"], "birim": ["unit"],
+}
+# Generic question words that only POSITION the excerpt window (e.g. on the "valid ... range" line).
+# They never raise the relevance score: "yağlama aralığı" must not look supported by any "range".
+FOCUS_ALIASES: dict[str, list[str]] = {
+    "geçerli": ["valid", "applicable"], "aralı": ["range"], "maksimum": ["maximum", "max"],
+    "minimum": ["minimum", "min"], "derece": ["°", "degree"], "uygulan": ["applicable", "applied"],
 }
 
 

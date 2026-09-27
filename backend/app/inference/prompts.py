@@ -31,7 +31,9 @@ KURALLAR (kesin):
 {REFUSAL_PHRASE}
 4. Türkçe yaz. {TERM_RULE}
 5. Kullandığın her bilginin sonunda pasaj numarasını [S1], [S2] biçiminde belirt.
-6. {{style}}
+6. PDF metninde Yunan harfli semboller Latin harfiyle görünebilir (aP = αP, rfP = ρfP, b = β); bunları aynı
+   sembol say ve yanıtta Yunan harfiyle yaz.
+7. {{style}}
 BİÇİM ÖRNEĞİ (yalnızca biçim; değerleri pasajdan al): "Temel kremayer (basic rack) profilinde diş yanakları (flanks)
 kavrama açısı (pressure angle) ile eğimlidir [S1]." """
 
@@ -40,14 +42,35 @@ STYLE_DETAIL = ("Kullanıcı ayrıntı istedi: varsayımları, ilgili formülü/
                 "yazdığı kadarıyla adım adım açıkla; pasajda olmayan hiçbir şey ekleme.")
 
 
-def verified_messages(question: str, passages: list[dict], detail: bool, history_hint: str | None = None) -> list[dict]:
+CODE_RULE = (
+    "Soru bir sembol, kod veya etiket soruyorsa (ör. αP, Class FD, Test 9B): kaynakta tam olarak bu koda bağlı "
+    "tanımı veya değeri (tablo satırı, şekil başlığı, anahtar/key, not) kaynaktaki terimleriyle aktar; birden çok "
+    "kod varsa her birini ayrı ayrı yaz."
+)
+RANGE_RULE = (
+    "Soru bir aralık, sınır, maksimum veya minimum soruyor: aynı varlığa (ör. aynı ağız/diş sayısı, aynı sınıf) ait "
+    "TÜM tablo satırlarını ve genel geçerlilik ifadelerini birlikte değerlendir; yalnızca ilk eşleşen satırı yanıt "
+    "olarak verme. 'Maksimum' soruluyorsa geçerli tüm aralıkların üst sınırını, 'minimum' soruluyorsa alt sınırını "
+    "ver ve tam geçerli aralığı da yaz. '—' veya 'Not applicable' satırları geçerli değildir."
+)
+
+
+def verified_messages(question: str, passages: list[dict], detail: bool, history_hint: str | None = None,
+                      extra_rules: list[str] | None = None,
+                      label_lines: list[tuple[int, str]] | None = None) -> list[dict]:
     blocks = []
     for i, p in enumerate(passages, start=1):
         head = f"[S{i}] {p['standard_code'] or p['title']} — {p['locator']}"
         blocks.append(f"{head}\n{p['text']}")
     ctx = "\n\n".join(blocks)
     system = VERIFIED_SYSTEM.replace("{style}", STYLE_DETAIL if detail else STYLE_SHORT)
+    extra = "".join(f"{n}. {rule}\n" for n, rule in enumerate(extra_rules or [], start=8))
+    if extra:  # question-specific rules go with the numbered rules, before the format example
+        system = system.replace("BİÇİM ÖRNEĞİ", extra + "BİÇİM ÖRNEĞİ", 1)
     user = f"KAYNAK PASAJLARI:\n{ctx}\n\n"
+    if label_lines:  # verbatim pointers into the passages above, not extra content
+        user += "SORUDAKİ KODLARIN GEÇTİĞİ SATIRLAR (yukarıdaki pasajlardan aynen):\n"
+        user += "\n".join(f"[S{i}] {line}" for i, line in label_lines) + "\n\n"
     if history_hint:
         user += f"ÖNCEKİ SORU (yalnızca bağlam, kaynak değildir): {history_hint}\n\n"
     user += f"SORU: {question}\n\nYanıtını yalnızca bu pasajlara dayandır; yanıtlanamıyorsa yalnızca: {REFUSAL_PHRASE}"

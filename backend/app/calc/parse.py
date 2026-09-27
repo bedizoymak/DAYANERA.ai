@@ -73,6 +73,8 @@ CALC_VERBS = re.compile(
     r"(hesapla|hesabı|hesabını|hesaplar|hesap\s*yap|hesap\s*et|kaç\s*(?:olur|mm|µm|derece)|bulur\s*musun|bul\b|"
     r"calculate|compute|determine)", I)
 TOLERANCE_HINT = re.compile(r"(tolerans|toleransı|1328|f_?pT|F_?pT|F_?αT|profil\s*tol|helis\s*tol|tolerance)", I)
+# the user asks for the transverse module itself (m_t needs only m_n and β, never z)
+TRANSVERSE_MODULE_TARGET = re.compile(r"(\bm\s*_?\s*t\b|transverse\s+module|alın\s+modül)", I)
 
 
 @dataclass
@@ -132,6 +134,8 @@ def parse_calculation(text: str) -> ParsedCalc:
         calc_type = "gear_pair"
     elif "z" in inputs and "m_n" in inputs:
         calc_type = "cylindrical_gear_geometry"
+    elif "m_n" in inputs and "beta" in inputs and TRANSVERSE_MODULE_TARGET.search(text):
+        calc_type = "transverse_module"
     if calc_type:
         from app.calc.rules import RULES
 

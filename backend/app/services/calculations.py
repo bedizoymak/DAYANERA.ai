@@ -146,6 +146,7 @@ def llm_draft(provider: LLMProvider, calc_type: str, inputs: dict[str, InputValu
     in_desc = {k: {"value": v.value, "unit": v.unit} for k, v in inputs.items()}
     outputs = {
         "cylindrical_gear_geometry": ["m_t", "alpha_t", "d", "d_b", "p_n", "p_t", "p_bt", "h_a", "h_f", "h", "d_a", "d_f"],
+        "transverse_module": ["m_t"],
         "gear_pair": ["u", "d1", "d2", "alpha_t", "alpha_wt"],
         "iso1328_flank_tolerance": ["f_pT", "F_pT", "f_HaT", "f_faT", "F_aT", "f_HbT", "f_fbT", "F_bT"],
         "iso286_it_tolerance": ["IT"],
@@ -220,6 +221,9 @@ def format_result_text(result: CalcResult, comparison: dict[str, Any]) -> str:
     lines = [f"**{RULES[result.calc_type].title}** — deterministik hesap motoru sonucu:"]
     for o in result.outputs:
         lines.append(f"- {o.label}: **{o.display}**")
+    if len(result.outputs) == 1:  # focused single-formula rules: show the relation next to the value
+        o = result.outputs[0]
+        lines.append(f"- Bağıntı ({o.formula_id}): {result.trace[-1] if result.trace else o.expression}")
     if comparison.get("performed"):
         if comparison.get("mismatch"):
             lines.append("")

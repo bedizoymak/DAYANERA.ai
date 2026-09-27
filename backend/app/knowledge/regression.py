@@ -41,7 +41,8 @@ MAX_FAILURES = 12
 
 
 def registry_fingerprint() -> str:
-    return hashlib.sha256(FORMULAS_FILE.read_bytes()).hexdigest()[:16]
+    # line endings are normalised: a Windows checkout (core.autocrlf) must fingerprint like the LF original
+    return hashlib.sha256(FORMULAS_FILE.read_bytes().replace(b"\r\n", b"\n")).hexdigest()[:16]
 
 
 class CachingResolver:

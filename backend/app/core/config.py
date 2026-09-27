@@ -128,6 +128,12 @@ class Settings(BaseSettings):
     retrieval_min_coverage: float = Field(default=0.5, ge=0.0, le=1.0)
     session_ttl_hours: int = 12
     calc_llm_compare: bool = True
+    # self-maintenance: diagnose Qwen/engine mismatches, verify corrections by deterministic regression
+    self_maintenance_enabled: bool = True
+    # what VERIFIED knowledge enters Qwen calculation drafts: "targeted" = only formula families that
+    # already have a VERIFIED correction (no extra prompt tokens until a mismatch taught something),
+    # "all" = every VERIFIED formula the engine computes for the calc type, "off" = nothing
+    knowledge_context_mode: Literal["targeted", "all", "off"] = "targeted"
     summary_every_n_messages: int = 12
 
     # --- future providers (disabled in beta) ---

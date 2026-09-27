@@ -13,6 +13,7 @@ from app.db.models import Document, DocumentVersion, ExtractedValue, IngestionJo
 from app.db.session import current_migration_revision, database_ping
 from app.inference.base import LLMProvider
 from app.inference.registry import provider_status
+from app.services.self_maintenance import stats as knowledge_stats
 
 
 def supabase_status(settings: Settings) -> dict[str, Any]:
@@ -125,6 +126,7 @@ def system_status(db: Session, settings: Settings, provider: LLMProvider, watche
     }
     if db_ok:
         status["corpus"] = corpus_status(db)
+        status["self_maintenance"] = knowledge_stats(db)
     if is_owner:
         status["storage"] = storage_status(settings)
         status["supabase"] = supabase_status(settings)

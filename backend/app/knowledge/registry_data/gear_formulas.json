@@ -1,0 +1,2694 @@
+{
+  "schema": "dayanera.formula_registry/1",
+  "domain": "cylindrical involute gears (ISO 21771 / ISO 53 / ISO 1328-1) and related gear geometry",
+  "conventions": {
+    "angles": "All expression angles are radians. Engine inputs/outputs in degrees are converted by the harness (variable unit 'rad', engine unit 'deg').",
+    "lengths": "mm",
+    "status_policy": "Statuses are computed by app.knowledge.validation, never declared here. VERIFIED requires a DAYANERA ISO evidence requirement (app.calc.evidence.REQ) AND numerical agreement of the deterministic engine over the validation matrix. External code never makes a rule VERIFIED on its own.",
+    "external_expressions": "Each external observation is a clean-room normalized reading of the cited line (file/symbol/line/commit), written in DAYANERA variables. 'domain' restricts the comparison to where the implementation's convention applies."
+  },
+  "variables": {
+    "z": {
+      "unit": "1",
+      "dimension": "count",
+      "description": "number of teeth (external gear, z > 0)"
+    },
+    "m_n": {
+      "unit": "mm",
+      "dimension": "length",
+      "description": "normal module"
+    },
+    "m_t": {
+      "unit": "mm",
+      "dimension": "length",
+      "description": "transverse module"
+    },
+    "alpha_n": {
+      "unit": "rad",
+      "dimension": "angle",
+      "description": "normal pressure angle"
+    },
+    "alpha_t": {
+      "unit": "rad",
+      "dimension": "angle",
+      "description": "transverse pressure angle"
+    },
+    "beta": {
+      "unit": "rad",
+      "dimension": "angle",
+      "description": "helix angle at the reference cylinder"
+    },
+    "x": {
+      "unit": "1",
+      "dimension": "ratio",
+      "description": "profile shift coefficient"
+    },
+    "k": {
+      "unit": "1",
+      "dimension": "ratio",
+      "description": "tip alteration coefficient"
+    },
+    "h_aP_star": {
+      "unit": "1",
+      "dimension": "ratio",
+      "description": "basic rack addendum coefficient (h_aP / m)"
+    },
+    "h_fP_star": {
+      "unit": "1",
+      "dimension": "ratio",
+      "description": "basic rack dedendum coefficient (h_fP / m)"
+    },
+    "d": {
+      "unit": "mm",
+      "dimension": "length",
+      "description": "reference diameter"
+    },
+    "d_b": {
+      "unit": "mm",
+      "dimension": "length",
+      "description": "base diameter"
+    },
+    "d_a": {
+      "unit": "mm",
+      "dimension": "length",
+      "description": "tip diameter"
+    },
+    "d_f": {
+      "unit": "mm",
+      "dimension": "length",
+      "description": "root diameter"
+    },
+    "d_y": {
+      "unit": "mm",
+      "dimension": "length",
+      "description": "any diameter between base and tip circle"
+    },
+    "p_n": {
+      "unit": "mm",
+      "dimension": "length",
+      "description": "normal pitch"
+    },
+    "p_t": {
+      "unit": "mm",
+      "dimension": "length",
+      "description": "transverse pitch"
+    },
+    "p_bt": {
+      "unit": "mm",
+      "dimension": "length",
+      "description": "transverse base pitch"
+    },
+    "h_a": {
+      "unit": "mm",
+      "dimension": "length",
+      "description": "addendum"
+    },
+    "h_f": {
+      "unit": "mm",
+      "dimension": "length",
+      "description": "dedendum"
+    },
+    "h": {
+      "unit": "mm",
+      "dimension": "length",
+      "description": "tooth depth"
+    },
+    "s_t": {
+      "unit": "mm",
+      "dimension": "length",
+      "description": "transverse tooth thickness at the reference circle"
+    },
+    "s_n": {
+      "unit": "mm",
+      "dimension": "length",
+      "description": "normal tooth thickness at the reference cylinder"
+    },
+    "s_yt": {
+      "unit": "mm",
+      "dimension": "length",
+      "description": "transverse tooth thickness at diameter d_y"
+    },
+    "z1": {
+      "unit": "1",
+      "dimension": "count",
+      "description": "pinion tooth count (smaller gear)"
+    },
+    "z2": {
+      "unit": "1",
+      "dimension": "count",
+      "description": "wheel tooth count; ring gear tooth count for internal pairs"
+    },
+    "x1": {
+      "unit": "1",
+      "dimension": "ratio",
+      "description": "profile shift coefficient of gear 1"
+    },
+    "x2": {
+      "unit": "1",
+      "dimension": "ratio",
+      "description": "profile shift coefficient of gear 2"
+    },
+    "u": {
+      "unit": "1",
+      "dimension": "ratio",
+      "description": "gear ratio z2/z1"
+    },
+    "a": {
+      "unit": "mm",
+      "dimension": "length",
+      "description": "reference centre distance"
+    },
+    "a_w": {
+      "unit": "mm",
+      "dimension": "length",
+      "description": "working centre distance"
+    },
+    "alpha_wt": {
+      "unit": "rad",
+      "dimension": "angle",
+      "description": "working transverse pressure angle"
+    },
+    "inv_alpha_wt": {
+      "unit": "1",
+      "dimension": "ratio",
+      "description": "involute of the working transverse pressure angle"
+    },
+    "inv_alpha_wt_int": {
+      "unit": "1",
+      "dimension": "ratio",
+      "description": "involute of the working pressure angle of an internal pair"
+    },
+    "alpha_wt_int": {
+      "unit": "rad",
+      "dimension": "angle",
+      "description": "working pressure angle of an internal pair"
+    },
+    "a_w_int": {
+      "unit": "mm",
+      "dimension": "length",
+      "description": "working centre distance of an internal pair"
+    },
+    "alpha": {
+      "unit": "rad",
+      "dimension": "angle",
+      "description": "generic pressure (roll) angle"
+    },
+    "inv_alpha": {
+      "unit": "1",
+      "dimension": "ratio",
+      "description": "involute function value"
+    },
+    "d_inv_alpha": {
+      "unit": "1",
+      "dimension": "ratio",
+      "description": "derivative of the involute function"
+    },
+    "r_b": {
+      "unit": "mm",
+      "dimension": "length",
+      "description": "base circle radius"
+    },
+    "phi": {
+      "unit": "rad",
+      "dimension": "angle",
+      "description": "involute roll angle"
+    },
+    "r_y": {
+      "unit": "mm",
+      "dimension": "length",
+      "description": "radius of the involute point at roll angle phi"
+    },
+    "b": {
+      "unit": "mm",
+      "dimension": "length",
+      "description": "facewidth"
+    },
+    "phi_twist": {
+      "unit": "rad",
+      "dimension": "angle",
+      "description": "rotation of the transverse section over the facewidth"
+    },
+    "p_z": {
+      "unit": "mm",
+      "dimension": "length",
+      "description": "lead of a helical gear"
+    },
+    "z_sun": {
+      "unit": "1",
+      "dimension": "count",
+      "description": "sun gear tooth count"
+    },
+    "z_planet": {
+      "unit": "1",
+      "dimension": "count",
+      "description": "planet gear tooth count"
+    },
+    "z_ring": {
+      "unit": "1",
+      "dimension": "count",
+      "description": "ring gear tooth count"
+    },
+    "n_p": {
+      "unit": "1",
+      "dimension": "count",
+      "description": "number of equally spaced planets"
+    },
+    "i_ring_fixed": {
+      "unit": "1",
+      "dimension": "ratio",
+      "description": "sun-to-carrier ratio with the ring held fixed"
+    },
+    "assembly_residue": {
+      "unit": "1",
+      "dimension": "count",
+      "description": "(z_sun + z_ring) mod n_p; 0 means equally spaced planets can be assembled"
+    },
+    "ring_phase_deg": {
+      "unit": "deg",
+      "dimension": "angle",
+      "description": "ring rotation used by a CAD generator to phase its teeth"
+    },
+    "m": {
+      "unit": "mm",
+      "dimension": "length",
+      "description": "axial module of a worm"
+    },
+    "z_1": {
+      "unit": "1",
+      "dimension": "count",
+      "description": "number of worm threads (starts)"
+    },
+    "d_1": {
+      "unit": "mm",
+      "dimension": "length",
+      "description": "worm reference diameter"
+    },
+    "gamma": {
+      "unit": "rad",
+      "dimension": "angle",
+      "description": "worm lead angle at the reference cylinder"
+    },
+    "p_z1": {
+      "unit": "mm",
+      "dimension": "length",
+      "description": "worm lead"
+    },
+    "d_minus_root": {
+      "unit": "mm",
+      "dimension": "length",
+      "description": "d_b − d_f; > 0 means a non-involute root flank below the base circle"
+    },
+    "A": {
+      "unit": "1",
+      "dimension": "count",
+      "description": "ISO 1328-1 flank tolerance class"
+    },
+    "f_pT": {
+      "unit": "µm",
+      "dimension": "length",
+      "description": "single pitch tolerance (unrounded)"
+    },
+    "F_pT": {
+      "unit": "µm",
+      "dimension": "length",
+      "description": "total cumulative pitch tolerance (unrounded)"
+    },
+    "f_HaT": {
+      "unit": "µm",
+      "dimension": "length",
+      "description": "profile slope tolerance (unrounded)"
+    },
+    "f_faT": {
+      "unit": "µm",
+      "dimension": "length",
+      "description": "profile form tolerance (unrounded)"
+    },
+    "F_aT": {
+      "unit": "µm",
+      "dimension": "length",
+      "description": "total profile tolerance (unrounded)"
+    },
+    "f_HbT": {
+      "unit": "µm",
+      "dimension": "length",
+      "description": "helix slope tolerance (unrounded)"
+    },
+    "f_fbT": {
+      "unit": "µm",
+      "dimension": "length",
+      "description": "helix form tolerance (unrounded)"
+    },
+    "F_bT": {
+      "unit": "µm",
+      "dimension": "length",
+      "description": "total helix tolerance (unrounded)"
+    }
+  },
+  "rules": [
+    {
+      "id": "gear.cyl.transverse_module",
+      "family": "transverse_conversion",
+      "name": "Transverse module",
+      "name_tr": "Alın modülü",
+      "kind": "formula",
+      "output": "m_t",
+      "expression": "m_n/cos(beta)",
+      "display": "m_t = m_n / cos β",
+      "matrix": "cylindrical",
+      "derive": true,
+      "assumptions": [
+        "normal sistem dişli: takım (temel kremayer) normal kesitte tanımlıdır"
+      ],
+      "applicability": {
+        "gear_kind": [
+          "external",
+          "internal"
+        ],
+        "tooth_form": [
+          "spur",
+          "helical"
+        ],
+        "profile_shift": "independent"
+      },
+      "valid_ranges": {
+        "beta": "0 ≤ β < 90°"
+      },
+      "iso": {
+        "citation": "ISO 21771:2007 4.2.7, Eq. (2)",
+        "evidence_ids": [
+          "iso21771.eq2"
+        ]
+      },
+      "engine": [
+        {
+          "calc_type": "cylindrical_gear_geometry",
+          "output_key": "m_t"
+        },
+        {
+          "calc_type": "transverse_module",
+          "output_key": "m_t"
+        }
+      ],
+      "observations": [
+        {
+          "repo": "freecad.gears",
+          "file": "pygears/involute_tooth.py",
+          "symbol": "InvoluteTooth._calc_gear_factors",
+          "target": "self.m",
+          "expression": "m_n/cos(beta)",
+          "note": "properties_from_tool=True branch (normal system)",
+          "tests": [
+            "tests/test_pygears_involute.py::test_properties_from_tool_uses_transverse_module_and_pressure_angle"
+          ],
+          "line": 107,
+          "fingerprint": "dfd909cc4d7bc328"
+        },
+        {
+          "repo": "bd_warehouse",
+          "file": "src/bd_warehouse/gear.py",
+          "symbol": "HelicalGear.__init__",
+          "target": "self.transverse_module",
+          "expression": "m_n/cos(beta)",
+          "note": "module_system='normal' branch",
+          "tests": [
+            "tests/test_gears.py::test_normal_module_helical_gear"
+          ],
+          "line": 692,
+          "fingerprint": "307efa42b90a84d3"
+        },
+        {
+          "repo": "cq_gears",
+          "file": "cq_gears/crossed_helical_gear.py",
+          "symbol": "CrossedHelicalGear.__init__",
+          "target": "mt",
+          "expression": "m_n/cos(beta)",
+          "line": 41,
+          "fingerprint": "de7d128d6645e4ed"
+        }
+      ],
+      "dayanera_tests": [
+        "tests/backend/test_calc_engine.py::test_helical_gear_with_profile_shift_and_units_conversion",
+        "tests/backend/test_knowledge_registry.py::test_verified_rules_agree_with_engine"
+      ]
+    },
+    {
+      "id": "gear.cyl.transverse_pressure_angle",
+      "family": "transverse_conversion",
+      "name": "Transverse pressure angle",
+      "name_tr": "Alın kavrama açısı",
+      "kind": "formula",
+      "output": "alpha_t",
+      "expression": "atan(tan(alpha_n)/cos(beta))",
+      "display": "tan α_n = tan α_t · cos β  ⇒  α_t = arctan(tan α_n / cos β)",
+      "matrix": "cylindrical",
+      "derive": true,
+      "assumptions": [
+        "β = 0 ise α_t = α_n"
+      ],
+      "applicability": {
+        "gear_kind": [
+          "external",
+          "internal"
+        ],
+        "tooth_form": [
+          "spur",
+          "helical"
+        ],
+        "profile_shift": "independent"
+      },
+      "iso": {
+        "citation": "ISO 21771:2007 4.3.6, Eq. (14)",
+        "evidence_ids": [
+          "iso21771.eq14"
+        ]
+      },
+      "engine": [
+        {
+          "calc_type": "cylindrical_gear_geometry",
+          "output_key": "alpha_t",
+          "unit": "deg"
+        },
+        {
+          "calc_type": "gear_pair",
+          "output_key": "alpha_t",
+          "unit": "deg"
+        }
+      ],
+      "observations": [
+        {
+          "repo": "freecad.gears",
+          "file": "pygears/involute_tooth.py",
+          "symbol": "InvoluteTooth._calc_gear_factors",
+          "target": "self.pressure_angle_t",
+          "expression": "atan(tan(alpha_n)/cos(beta))",
+          "tests": [
+            "tests/test_pygears_involute.py::test_properties_from_tool_uses_transverse_module_and_pressure_angle"
+          ],
+          "line": 106,
+          "fingerprint": "20433a397ec712d0"
+        },
+        {
+          "repo": "freecad.gears",
+          "file": "pygears/involute_tooth.py",
+          "symbol": "InvoluteRack.compute_properties",
+          "target": "pressure_angle_t",
+          "expression": "atan(tan(alpha_n)/cos(beta))",
+          "tests": [
+            "tests/test_pygears_involute.py::test_rack_compute_properties_plain_and_from_tool"
+          ],
+          "line": 388,
+          "fingerprint": "20433a397ec712d0"
+        },
+        {
+          "repo": "bd_warehouse",
+          "file": "src/bd_warehouse/gear.py",
+          "symbol": "HelicalGear.__init__",
+          "target": "self.transverse_pressure_angle",
+          "expression": "atan(tan(alpha_n)/cos(beta))",
+          "note": "degrees(...) in the source; normalized to radians",
+          "line": 694,
+          "fingerprint": "1eb7259e29d614d8"
+        },
+        {
+          "repo": "cq_gears",
+          "file": "cq_gears/crossed_helical_gear.py",
+          "symbol": "CrossedHelicalGear.__init__",
+          "target": "at0",
+          "expression": "atan(alpha_n/cos(beta))",
+          "note": "the pressure angle in radians is used in place of its tangent (tan missing); wrong even for β = 0 (arctan 0.349 = 19.27° instead of 20°)",
+          "suspected_error_class": "DEGREE_RADIAN_ERROR",
+          "line": 40,
+          "fingerprint": "2483142f4192b2d8"
+        }
+      ],
+      "dayanera_tests": [
+        "tests/backend/test_calc_engine.py::test_helical_gear_with_profile_shift_and_units_conversion",
+        "tests/backend/test_knowledge_registry.py::test_cq_gears_transverse_angle_conflict_is_recorded"
+      ]
+    },
+    {
+      "id": "gear.cyl.reference_diameter",
+      "family": "reference_diameter",
+      "name": "Reference diameter",
+      "name_tr": "Referans çapı",
+      "kind": "formula",
+      "output": "d",
+      "expression": "z*m_n/cos(beta)",
+      "display": "d = z·m_t = z·m_n / cos β",
+      "matrix": "cylindrical",
+      "derive": true,
+      "applicability": {
+        "gear_kind": [
+          "external"
+        ],
+        "tooth_form": [
+          "spur",
+          "helical"
+        ],
+        "profile_shift": "independent"
+      },
+      "iso": {
+        "citation": "ISO 21771:2007 4.2.4, Eq. (1)",
+        "evidence_ids": [
+          "iso21771.eq1"
+        ]
+      },
+      "engine": [
+        {
+          "calc_type": "cylindrical_gear_geometry",
+          "output_key": "d"
+        }
+      ],
+      "observations": [
+        {
+          "repo": "freecad.gears",
+          "file": "pygears/involute_tooth.py",
+          "symbol": "InvoluteTooth._calc_gear_factors",
+          "target": "self.d",
+          "expression": "z*m_n/cos(beta)",
+          "note": "normal system (properties_from_tool=True)",
+          "tests": [
+            "tests/test_pygears_involute.py::test_default_gear_factors"
+          ],
+          "line": 115,
+          "fingerprint": "78fbff2298a0dca7"
+        },
+        {
+          "repo": "bd_warehouse",
+          "file": "src/bd_warehouse/gear.py",
+          "symbol": "InvoluteToothProfile.__init__",
+          "target": "self.pitch_radius",
+          "expression": "2*(m_t*z/2)",
+          "note": "HelicalGear passes the transverse module",
+          "line": 159,
+          "fingerprint": "646ef90ac344efda"
+        },
+        {
+          "repo": "cq_gears",
+          "file": "cq_gears/crossed_helical_gear.py",
+          "symbol": "CrossedHelicalGear.__init__",
+          "target": "d0",
+          "expression": "m_t*z",
+          "line": 43,
+          "fingerprint": "eaa4e35b2420ac1a"
+        },
+        {
+          "repo": "cq_gears",
+          "file": "cq_gears/spur_gear.py",
+          "symbol": "SpurGear.__init__",
+          "target": "d0",
+          "expression": "m_n*z",
+          "domain": {
+            "beta": 0
+          },
+          "convention": "transverse_system",
+          "note": "SpurGear twists the spur profile for helix_angle ≠ 0: the module is then a transverse module",
+          "line": 74,
+          "fingerprint": "23e41cd97efa9476"
+        },
+        {
+          "repo": "FreeCAD",
+          "file": "src/Mod/PartDesign/fcgear/involute.py",
+          "symbol": "_create_involute_profile",
+          "target": "Rref",
+          "expression": "2*(z*m_n/2)",
+          "domain": {
+            "beta": 0
+          },
+          "note": "spur profiles only",
+          "line": 144,
+          "fingerprint": "57b4a7edadafbf65"
+        }
+      ],
+      "dayanera_tests": [
+        "tests/backend/test_calc_engine.py::test_spur_gear_geometry_values",
+        "tests/backend/test_self_maintenance.py::test_mandatory_spur_gear_values"
+      ]
+    },
+    {
+      "id": "gear.cyl.base_diameter",
+      "family": "base_circle",
+      "name": "Base diameter",
+      "name_tr": "Temel daire çapı",
+      "kind": "formula",
+      "output": "d_b",
+      "expression": "d*cos(alpha_t)",
+      "display": "d_b = d·cos α_t = z·m_t·cos α_t",
+      "identities": [
+        "z*m_t*cos(alpha_t)",
+        "z*m_n*cos(alpha_t)/cos(beta)"
+      ],
+      "matrix": "cylindrical",
+      "derive": true,
+      "assumptions": [
+        "α_t ALIN kavrama açısıdır; β = 0 ise α_t = α_n",
+        "profil kaydırma x'ten ve k'den bağımsızdır"
+      ],
+      "applicability": {
+        "gear_kind": [
+          "external",
+          "internal (|d| with z < 0 convention)"
+        ],
+        "tooth_form": [
+          "spur",
+          "helical"
+        ],
+        "profile_shift": "independent"
+      },
+      "iso": {
+        "citation": "ISO 21771:2007 4.3.5 Eq. (13) and 4.3.10 Eq. (19)",
+        "evidence_ids": [
+          "iso21771.eq13",
+          "iso21771.eq19"
+        ]
+      },
+      "engine": [
+        {
+          "calc_type": "cylindrical_gear_geometry",
+          "output_key": "d_b"
+        }
+      ],
+      "observations": [
+        {
+          "repo": "freecad.gears",
+          "file": "pygears/involute_tooth.py",
+          "symbol": "InvoluteTooth._calc_gear_factors",
+          "target": "self.dg",
+          "expression": "d*cos(alpha_t)",
+          "tests": [
+            "tests/test_pygears_involute.py::test_default_gear_factors"
+          ],
+          "line": 119,
+          "fingerprint": "597e091817699bef"
+        },
+        {
+          "repo": "bd_warehouse",
+          "file": "src/bd_warehouse/gear.py",
+          "symbol": "InvoluteToothProfile.__init__",
+          "target": "self.base_radius",
+          "expression": "2*((m_t*z/2)*cos(alpha_t))",
+          "note": "HelicalGear passes transverse module and transverse pressure angle",
+          "line": 160,
+          "fingerprint": "5d9f8f86f317a529"
+        },
+        {
+          "repo": "cq_gears",
+          "file": "cq_gears/spur_gear.py",
+          "symbol": "SpurGear.__init__",
+          "target": "self.rb",
+          "expression": "2*(cos(alpha_n)*(m_n*z)/2)",
+          "domain": {
+            "beta": 0
+          },
+          "convention": "transverse_system",
+          "line": 92,
+          "fingerprint": "059e115fb041797a"
+        },
+        {
+          "repo": "cq_gears",
+          "file": "cq_gears/crossed_helical_gear.py",
+          "symbol": "CrossedHelicalGear.__init__",
+          "target": "self.rb",
+          "expression": "2*(cos(atan(alpha_n/cos(beta)))*(m_t*z/2))",
+          "note": "inherits the at0 defect of the transverse pressure angle",
+          "suspected_error_class": "DEGREE_RADIAN_ERROR",
+          "line": 53,
+          "fingerprint": "cd523642d8edd6c6"
+        },
+        {
+          "repo": "FreeCAD",
+          "file": "src/Mod/PartDesign/fcgear/involute.py",
+          "symbol": "_create_involute_profile",
+          "target": "Rb",
+          "expression": "2*((z*m_n/2)*cos(alpha_n))",
+          "domain": {
+            "beta": 0
+          },
+          "line": 145,
+          "fingerprint": "4acf3e93d0dad993"
+        }
+      ],
+      "dayanera_tests": [
+        "tests/backend/test_self_maintenance.py::test_mandatory_spur_gear_values",
+        "tests/backend/test_self_maintenance.py::test_base_circle_regression_matrix"
+      ]
+    },
+    {
+      "id": "gear.cyl.normal_pitch",
+      "family": "pitch",
+      "name": "Normal pitch",
+      "name_tr": "Normal adım",
+      "kind": "formula",
+      "output": "p_n",
+      "expression": "pi*m_n",
+      "display": "p_n = π·m_n",
+      "matrix": "cylindrical",
+      "derive": true,
+      "applicability": {
+        "gear_kind": [
+          "external",
+          "internal"
+        ],
+        "tooth_form": [
+          "spur",
+          "helical"
+        ],
+        "profile_shift": "independent"
+      },
+      "iso": {
+        "citation": "ISO 21771:2007 4.4.2.2, Eq. (24)",
+        "evidence_ids": [
+          "iso21771.eq24"
+        ]
+      },
+      "engine": [
+        {
+          "calc_type": "cylindrical_gear_geometry",
+          "output_key": "p_n"
+        }
+      ],
+      "observations": [],
+      "dayanera_tests": [
+        "tests/backend/test_calc_engine.py::test_spur_gear_geometry_values"
+      ]
+    },
+    {
+      "id": "gear.cyl.transverse_pitch",
+      "family": "pitch",
+      "name": "Transverse pitch",
+      "name_tr": "Alın adımı",
+      "kind": "formula",
+      "output": "p_t",
+      "expression": "pi*m_t",
+      "display": "p_t = π·m_t",
+      "identities": [
+        "pi*d/z"
+      ],
+      "matrix": "cylindrical",
+      "derive": true,
+      "applicability": {
+        "gear_kind": [
+          "external",
+          "internal"
+        ],
+        "tooth_form": [
+          "spur",
+          "helical"
+        ],
+        "profile_shift": "independent"
+      },
+      "iso": {
+        "citation": "ISO 21771:2007 4.4.2.1, Eq. (23)",
+        "evidence_ids": [
+          "iso21771.eq23"
+        ]
+      },
+      "engine": [
+        {
+          "calc_type": "cylindrical_gear_geometry",
+          "output_key": "p_t"
+        }
+      ],
+      "observations": [
+        {
+          "repo": "freecad.gears",
+          "file": "pygears/involute_tooth.py",
+          "symbol": "InvoluteTooth._calc_gear_factors",
+          "target": "self.pitch",
+          "expression": "m_t*pi",
+          "tests": [
+            "tests/test_pygears_involute.py::test_default_gear_factors"
+          ],
+          "line": 112,
+          "fingerprint": "1228721b6db86de3"
+        },
+        {
+          "repo": "freecad.gears",
+          "file": "pygears/involute_tooth.py",
+          "symbol": "InvoluteRack.compute_properties",
+          "target": "pitch",
+          "expression": "m_t*pi",
+          "tests": [
+            "tests/test_pygears_involute.py::test_rack_compute_properties_plain_and_from_tool"
+          ],
+          "line": 396,
+          "fingerprint": "d7904fcd0689ffe7"
+        }
+      ],
+      "dayanera_tests": [
+        "tests/backend/test_self_maintenance.py::test_mandatory_spur_gear_values"
+      ]
+    },
+    {
+      "id": "gear.cyl.transverse_base_pitch",
+      "family": "base_circle",
+      "name": "Transverse base pitch",
+      "name_tr": "Alın temel adımı",
+      "kind": "formula",
+      "output": "p_bt",
+      "expression": "p_t*cos(alpha_t)",
+      "display": "p_bt = p_t·cos α_t = π·m_t·cos α_t = π·d_b / z",
+      "identities": [
+        "pi*m_t*cos(alpha_t)",
+        "pi*d_b/z"
+      ],
+      "matrix": "cylindrical",
+      "derive": true,
+      "assumptions": [
+        "ALIN kavrama açısı α_t kullanılır",
+        "profil kaydırma x'ten bağımsızdır"
+      ],
+      "applicability": {
+        "gear_kind": [
+          "external",
+          "internal"
+        ],
+        "tooth_form": [
+          "spur",
+          "helical"
+        ],
+        "profile_shift": "independent"
+      },
+      "iso": {
+        "citation": "ISO 21771:2007 4.4.5, Eq. (28)",
+        "evidence_ids": [
+          "iso21771.eq28"
+        ]
+      },
+      "engine": [
+        {
+          "calc_type": "cylindrical_gear_geometry",
+          "output_key": "p_bt"
+        }
+      ],
+      "observations": [],
+      "implementation_notes": "No reference repository computes p_bt explicitly; the identity p_bt·z = π·d_b ties it to the independently supported base diameter.",
+      "dayanera_tests": [
+        "tests/backend/test_self_maintenance.py::test_mandatory_spur_gear_values",
+        "tests/backend/test_self_maintenance.py::test_base_circle_regression_matrix"
+      ]
+    },
+    {
+      "id": "gear.cyl.addendum",
+      "family": "tooth_depth",
+      "name": "Addendum",
+      "name_tr": "Diş başı yüksekliği",
+      "kind": "formula",
+      "output": "h_a",
+      "expression": "h_aP_star*m_n + x*m_n + k*m_n",
+      "display": "h_a = h_aP + x·m_n + k·m_n",
+      "matrix": "cylindrical",
+      "derive": true,
+      "applicability": {
+        "gear_kind": [
+          "external"
+        ],
+        "tooth_form": [
+          "spur",
+          "helical"
+        ],
+        "profile_shift": "included"
+      },
+      "iso": {
+        "citation": "ISO 21771:2007 4.6.2, Eq. (36)",
+        "evidence_ids": [
+          "iso21771.eq36_37"
+        ]
+      },
+      "engine": [
+        {
+          "calc_type": "cylindrical_gear_geometry",
+          "output_key": "h_a"
+        }
+      ],
+      "observations": [
+        {
+          "repo": "FreeCAD",
+          "file": "src/Mod/PartDesign/fcgear/involute.py",
+          "symbol": "_create_involute_profile",
+          "target": "outer_height",
+          "expression": "h_aP_star*m_n + x*m_n",
+          "domain": {
+            "k": 0,
+            "beta": 0
+          },
+          "line": 137,
+          "fingerprint": "49d91a8f33a9b690"
+        },
+        {
+          "repo": "bd_warehouse",
+          "file": "src/bd_warehouse/gear.py",
+          "symbol": "HelicalGear.__init__",
+          "target": "reference_addendum",
+          "expression": "m_n",
+          "domain": {
+            "x": 0,
+            "k": 0,
+            "h_aP_star": 1
+          },
+          "note": "addendum defaults to the NORMAL module for helical gears (ISO-consistent)",
+          "tests": [
+            "tests/test_gears.py::test_normal_module_helical_gear"
+          ],
+          "line": 687,
+          "fingerprint": "a164f7c4e99a76d7"
+        },
+        {
+          "repo": "cq_gears",
+          "file": "cq_gears/spur_gear.py",
+          "symbol": "SpurGear.__init__",
+          "target": "adn",
+          "expression": "h_aP_star*m_n",
+          "domain": {
+            "x": 0,
+            "k": 0,
+            "beta": 0
+          },
+          "line": 75,
+          "fingerprint": "997c4bacda69fad0"
+        },
+        {
+          "repo": "cq_gears",
+          "file": "cq_gears/crossed_helical_gear.py",
+          "symbol": "CrossedHelicalGear.__init__",
+          "target": "adn",
+          "expression": "h_aP_star*m_t",
+          "domain": {
+            "x": 0,
+            "k": 0
+          },
+          "note": "addendum on the transverse module although the input is the normal module",
+          "suspected_error_class": "NORMAL_TRANSVERSE_CONFUSION",
+          "line": 44,
+          "fingerprint": "997c4bacda69fad0"
+        }
+      ],
+      "dayanera_tests": [
+        "tests/backend/test_calc_engine.py::test_helical_gear_with_profile_shift_and_units_conversion"
+      ]
+    },
+    {
+      "id": "gear.cyl.dedendum",
+      "family": "tooth_depth",
+      "name": "Dedendum",
+      "name_tr": "Diş dibi yüksekliği",
+      "kind": "formula",
+      "output": "h_f",
+      "expression": "h_fP_star*m_n - x*m_n",
+      "display": "h_f = h_fP − x·m_n",
+      "matrix": "cylindrical",
+      "derive": true,
+      "applicability": {
+        "gear_kind": [
+          "external"
+        ],
+        "tooth_form": [
+          "spur",
+          "helical"
+        ],
+        "profile_shift": "included"
+      },
+      "iso": {
+        "citation": "ISO 21771:2007 4.6.2, Eq. (37)",
+        "evidence_ids": [
+          "iso21771.eq36_37"
+        ]
+      },
+      "engine": [
+        {
+          "calc_type": "cylindrical_gear_geometry",
+          "output_key": "h_f"
+        }
+      ],
+      "observations": [
+        {
+          "repo": "FreeCAD",
+          "file": "src/Mod/PartDesign/fcgear/involute.py",
+          "symbol": "_create_involute_profile",
+          "target": "inner_height",
+          "expression": "h_fP_star*m_n - x*m_n",
+          "domain": {
+            "beta": 0
+          },
+          "line": 138,
+          "fingerprint": "797633bc697558e6"
+        },
+        {
+          "repo": "bd_warehouse",
+          "file": "src/bd_warehouse/gear.py",
+          "symbol": "HelicalGear.__init__",
+          "target": "reference_dedendum",
+          "expression": "1.25*m_n",
+          "domain": {
+            "x": 0,
+            "h_fP_star": 1.25
+          },
+          "line": 688,
+          "fingerprint": "f036994482ca4c5a"
+        },
+        {
+          "repo": "cq_gears",
+          "file": "cq_gears/spur_gear.py",
+          "symbol": "SpurGear.__init__",
+          "target": "ddn",
+          "expression": "h_fP_star*m_n",
+          "domain": {
+            "x": 0,
+            "beta": 0
+          },
+          "line": 76,
+          "fingerprint": "7fa4f10c0cfb94a0"
+        },
+        {
+          "repo": "cq_gears",
+          "file": "cq_gears/crossed_helical_gear.py",
+          "symbol": "CrossedHelicalGear.__init__",
+          "target": "ddn",
+          "expression": "h_fP_star*m_t",
+          "domain": {
+            "x": 0
+          },
+          "suspected_error_class": "NORMAL_TRANSVERSE_CONFUSION",
+          "line": 45,
+          "fingerprint": "7fa4f10c0cfb94a0"
+        }
+      ],
+      "dayanera_tests": [
+        "tests/backend/test_calc_engine.py::test_helical_gear_with_profile_shift_and_units_conversion"
+      ]
+    },
+    {
+      "id": "gear.cyl.tooth_depth",
+      "family": "tooth_depth",
+      "name": "Tooth depth",
+      "name_tr": "Diş yüksekliği",
+      "kind": "formula",
+      "output": "h",
+      "expression": "h_aP_star*m_n + k*m_n + h_fP_star*m_n",
+      "display": "h = h_aP + k·m_n + h_fP",
+      "identities": [
+        "h_a + h_f"
+      ],
+      "matrix": "cylindrical",
+      "derive": true,
+      "applicability": {
+        "gear_kind": [
+          "external"
+        ],
+        "tooth_form": [
+          "spur",
+          "helical"
+        ],
+        "profile_shift": "independent"
+      },
+      "iso": {
+        "citation": "ISO 21771:2007 4.6.1, Eq. (35)",
+        "evidence_ids": [
+          "iso21771.eq35"
+        ]
+      },
+      "engine": [
+        {
+          "calc_type": "cylindrical_gear_geometry",
+          "output_key": "h"
+        }
+      ],
+      "observations": [],
+      "dayanera_tests": [
+        "tests/backend/test_calc_engine.py::test_spur_gear_geometry_values"
+      ]
+    },
+    {
+      "id": "gear.cyl.tip_diameter",
+      "family": "tip_root_diameter",
+      "name": "Tip diameter",
+      "name_tr": "Diş başı çapı",
+      "kind": "formula",
+      "output": "d_a",
+      "expression": "d + 2*(x*m_n + h_aP_star*m_n + k*m_n)",
+      "display": "d_a = d + 2(x·m_n + h_aP + k·m_n)",
+      "identities": [
+        "d + 2*h_a"
+      ],
+      "matrix": "cylindrical",
+      "derive": true,
+      "applicability": {
+        "gear_kind": [
+          "external"
+        ],
+        "tooth_form": [
+          "spur",
+          "helical"
+        ],
+        "profile_shift": "included"
+      },
+      "iso": {
+        "citation": "ISO 21771:2007 4.5.3, Eq. (33)",
+        "evidence_ids": [
+          "iso21771.eq33"
+        ]
+      },
+      "engine": [
+        {
+          "calc_type": "cylindrical_gear_geometry",
+          "output_key": "d_a"
+        }
+      ],
+      "observations": [
+        {
+          "repo": "freecad.gears",
+          "file": "pygears/involute_tooth.py",
+          "symbol": "InvoluteTooth._calc_gear_factors",
+          "target": "self.da",
+          "expression": "d + 2*m_n + 2*(x + k)*m_n",
+          "domain": {
+            "h_aP_star": 1
+          },
+          "note": "'head' plays the role of k",
+          "tests": [
+            "tests/test_pygears_involute.py::test_default_gear_factors",
+            "tests/test_pygears_involute.py::test_head_and_shift_change_tip_and_root_diameters"
+          ],
+          "line": 117,
+          "fingerprint": "762d7c297c3bc4a0"
+        },
+        {
+          "repo": "bd_warehouse",
+          "file": "src/bd_warehouse/gear.py",
+          "symbol": "InvoluteToothProfile.__init__",
+          "target": "self.addendum_radius",
+          "expression": "2*(m_t*z/2 + m_n)",
+          "domain": {
+            "x": 0,
+            "k": 0,
+            "h_aP_star": 1
+          },
+          "tests": [
+            "tests/test_gears.py::test_normal_module_helical_gear"
+          ],
+          "line": 162,
+          "fingerprint": "f8dafee9bbfae9d2"
+        },
+        {
+          "repo": "cq_gears",
+          "file": "cq_gears/spur_gear.py",
+          "symbol": "SpurGear.__init__",
+          "target": "da",
+          "expression": "m_n*z + 2*h_aP_star*m_n",
+          "domain": {
+            "x": 0,
+            "k": 0,
+            "beta": 0
+          },
+          "line": 83,
+          "fingerprint": "ff031e4aa2e2d81d"
+        },
+        {
+          "repo": "cq_gears",
+          "file": "cq_gears/crossed_helical_gear.py",
+          "symbol": "CrossedHelicalGear.__init__",
+          "target": "da",
+          "expression": "m_t*z + 2*h_aP_star*m_t",
+          "domain": {
+            "x": 0,
+            "k": 0
+          },
+          "suspected_error_class": "NORMAL_TRANSVERSE_CONFUSION",
+          "line": 46,
+          "fingerprint": "ff031e4aa2e2d81d"
+        }
+      ],
+      "dayanera_tests": [
+        "tests/backend/test_calc_engine.py::test_spur_gear_geometry_values",
+        "tests/backend/test_self_maintenance.py::test_mandatory_spur_gear_values"
+      ]
+    },
+    {
+      "id": "gear.cyl.root_diameter",
+      "family": "tip_root_diameter",
+      "name": "Root diameter",
+      "name_tr": "Diş dibi çapı",
+      "kind": "formula",
+      "output": "d_f",
+      "expression": "d - 2*(h_fP_star*m_n - x*m_n)",
+      "display": "d_f = d − 2(h_fP − x·m_n)",
+      "identities": [
+        "d - 2*h_f"
+      ],
+      "matrix": "cylindrical",
+      "derive": true,
+      "applicability": {
+        "gear_kind": [
+          "external"
+        ],
+        "tooth_form": [
+          "spur",
+          "helical"
+        ],
+        "profile_shift": "included"
+      },
+      "iso": {
+        "citation": "ISO 21771:2007 4.5.4, Eq. (34)",
+        "evidence_ids": [
+          "iso21771.eq34"
+        ]
+      },
+      "engine": [
+        {
+          "calc_type": "cylindrical_gear_geometry",
+          "output_key": "d_f"
+        }
+      ],
+      "observations": [
+        {
+          "repo": "freecad.gears",
+          "file": "pygears/involute_tooth.py",
+          "symbol": "InvoluteTooth._calc_gear_factors",
+          "target": "self.df",
+          "expression": "d - 2*m_n - 2*(h_fP_star - 1)*m_n + 2*x*m_n",
+          "note": "c = clearance·m_n with h_fP* = 1 + clearance",
+          "tests": [
+            "tests/test_pygears_involute.py::test_default_gear_factors"
+          ],
+          "line": 118,
+          "fingerprint": "45e60b55cf6de452"
+        },
+        {
+          "repo": "freecad.gears",
+          "file": "pygears/computation.py",
+          "symbol": "root_diameter",
+          "target": "return",
+          "expression": "m_n*(z - 2*h_fP_star + 2*x)",
+          "domain": {
+            "beta": 0
+          },
+          "line": 100,
+          "fingerprint": "d0e65132d00807b4"
+        },
+        {
+          "repo": "bd_warehouse",
+          "file": "src/bd_warehouse/gear.py",
+          "symbol": "InvoluteToothProfile.__init__",
+          "target": "self.root_radius",
+          "expression": "2*(m_t*z/2 - 1.25*m_n)",
+          "domain": {
+            "x": 0,
+            "h_fP_star": 1.25
+          },
+          "line": 164,
+          "fingerprint": "eb3b3407917711f2"
+        },
+        {
+          "repo": "cq_gears",
+          "file": "cq_gears/spur_gear.py",
+          "symbol": "SpurGear.__init__",
+          "target": "dd",
+          "expression": "m_n*z - 2*h_fP_star*m_n",
+          "domain": {
+            "x": 0,
+            "beta": 0
+          },
+          "line": 84,
+          "fingerprint": "0302f3fff76a1784"
+        },
+        {
+          "repo": "cq_gears",
+          "file": "cq_gears/crossed_helical_gear.py",
+          "symbol": "CrossedHelicalGear.__init__",
+          "target": "dd",
+          "expression": "m_t*z - 2*h_fP_star*m_t",
+          "domain": {
+            "x": 0
+          },
+          "suspected_error_class": "NORMAL_TRANSVERSE_CONFUSION",
+          "line": 47,
+          "fingerprint": "0302f3fff76a1784"
+        }
+      ],
+      "dayanera_tests": [
+        "tests/backend/test_calc_engine.py::test_spur_gear_geometry_values",
+        "tests/backend/test_self_maintenance.py::test_mandatory_spur_gear_values"
+      ]
+    },
+    {
+      "id": "gear.rack.iso53_basic_rack",
+      "family": "basic_rack",
+      "name": "ISO 53 standard basic rack proportions",
+      "name_tr": "ISO 53 standart temel kremayer oranları",
+      "kind": "constants",
+      "constants": {
+        "alpha_P_deg": 20,
+        "h_aP_star": 1,
+        "h_fP_star": 1.25,
+        "c_P_star": 0.25,
+        "rho_fP_star": 0.38
+      },
+      "display": "α_P = 20°, h_aP = 1·m, c_P = 0,25·m, h_fP = 1,25·m, ρ_fP = 0,38·m",
+      "applicability": {
+        "gear_kind": [
+          "external",
+          "internal"
+        ],
+        "tooth_form": [
+          "spur",
+          "helical"
+        ]
+      },
+      "iso": {
+        "citation": "ISO 53:1998 Table 2",
+        "evidence_ids": [
+          "iso53.table2"
+        ]
+      },
+      "engine_defaults": {
+        "calc_type": "cylindrical_gear_geometry",
+        "map": {
+          "alpha_P_deg": "alpha_n",
+          "h_aP_star": "h_aP_star",
+          "h_fP_star": "h_fP_star"
+        }
+      },
+      "observations": [
+        {
+          "repo": "cq_gears",
+          "file": "cq_gears/spur_gear.py",
+          "symbol": "GearBase",
+          "target": "ka",
+          "constant": "h_aP_star",
+          "value": 1.0,
+          "line": 28,
+          "fingerprint": "17615864bc826a48"
+        },
+        {
+          "repo": "cq_gears",
+          "file": "cq_gears/spur_gear.py",
+          "symbol": "GearBase",
+          "target": "kd",
+          "constant": "h_fP_star",
+          "value": 1.25,
+          "line": 29,
+          "fingerprint": "850e440489c316c1"
+        },
+        {
+          "repo": "freecad.gears",
+          "file": "freecad/gears/involutegear.py",
+          "symbol": "InvoluteGear.__init__",
+          "target": "obj.clearance",
+          "constant": "c_P_star",
+          "value": 0.25,
+          "note": "workbench default",
+          "line": 65,
+          "fingerprint": "0f7377b6db17b295"
+        },
+        {
+          "repo": "freecad.gears",
+          "file": "pygears/involute_tooth.py",
+          "symbol": "InvoluteTooth.__init__",
+          "target": "arg:clearance",
+          "constant": "c_P_star",
+          "value": 0.12,
+          "note": "library default of the pygears class; the FreeCAD workbench overrides it with 0.25",
+          "line": 52,
+          "fingerprint": "96052ac6d232dfc5"
+        },
+        {
+          "repo": "FreeCAD",
+          "file": "src/Mod/PartDesign/fcgear/involute.py",
+          "symbol": "CreateExternalGear",
+          "target": "arg:addCoeff",
+          "constant": "h_aP_star",
+          "value": 1.0,
+          "line": 33,
+          "fingerprint": "17615864bc826a48"
+        },
+        {
+          "repo": "FreeCAD",
+          "file": "src/Mod/PartDesign/fcgear/involute.py",
+          "symbol": "CreateExternalGear",
+          "target": "arg:dedCoeff",
+          "constant": "h_fP_star",
+          "value": 1.25,
+          "line": 33,
+          "fingerprint": "850e440489c316c1"
+        },
+        {
+          "repo": "FreeCAD",
+          "file": "src/Mod/PartDesign/fcgear/involute.py",
+          "symbol": "CreateExternalGear",
+          "target": "arg:filletCoeff",
+          "constant": "rho_fP_star",
+          "value": 0.375,
+          "note": "legacy default kept for model compatibility; the docstring itself notes that ISO specifies 0.38",
+          "line": 33,
+          "fingerprint": "ee710731e9866124"
+        },
+        {
+          "repo": "bd_warehouse",
+          "file": "src/bd_warehouse/gear.py",
+          "symbol": "InvoluteToothProfile.__init__",
+          "target": "self.dedendum",
+          "constant": "h_fP_star",
+          "value": 1.25,
+          "line": 163,
+          "fingerprint": "cc3e96801ab2e774"
+        }
+      ],
+      "dayanera_tests": [
+        "tests/backend/test_calc_engine.py::test_spur_gear_geometry_values",
+        "tests/backend/test_math_presentation.py::test_gear_default_coefficients_can_be_explicitly_provided"
+      ]
+    },
+    {
+      "id": "gear.pair.gear_ratio",
+      "family": "gear_pair",
+      "name": "Gear ratio",
+      "name_tr": "Dişli oranı",
+      "kind": "formula",
+      "output": "u",
+      "expression": "z2/z1",
+      "display": "u = z2 / z1 (z1 = pinion)",
+      "matrix": "pair",
+      "applicability": {
+        "gear_kind": [
+          "external pair"
+        ],
+        "tooth_form": [
+          "spur",
+          "helical"
+        ]
+      },
+      "iso": {
+        "citation": "ISO 21771:2007 5.2.1, Eq. (52)",
+        "evidence_ids": [
+          "iso21771.eq52"
+        ]
+      },
+      "engine": [
+        {
+          "calc_type": "gear_pair",
+          "output_key": "u"
+        }
+      ],
+      "observations": [],
+      "dayanera_tests": [
+        "tests/backend/test_calc_engine.py::test_gear_pair_ratio_and_working_pressure_angle"
+      ]
+    },
+    {
+      "id": "gear.pair.working_transverse_pressure_angle",
+      "family": "gear_pair",
+      "name": "Working transverse pressure angle from the centre distance",
+      "name_tr": "Çalışma alın kavrama açısı (eksen mesafesinden)",
+      "kind": "formula",
+      "output": "alpha_wt",
+      "expression": "acos(m_n*(z1 + z2)/(2*a_w*cos(beta))*cos(alpha_t))",
+      "display": "α_wt = arccos[ m_n(z1+z2)/(2·a_w·cos β) · cos α_t ]",
+      "identities": [
+        "acos(a*cos(alpha_t)/a_w)"
+      ],
+      "matrix": "pair",
+      "applicability": {
+        "gear_kind": [
+          "external pair"
+        ],
+        "tooth_form": [
+          "spur",
+          "helical"
+        ]
+      },
+      "iso": {
+        "citation": "ISO 21771:2007 5.2.4, Eq. (54)",
+        "evidence_ids": [
+          "iso21771.eq54"
+        ]
+      },
+      "engine": [
+        {
+          "calc_type": "gear_pair",
+          "output_key": "alpha_wt",
+          "unit": "deg"
+        }
+      ],
+      "observations": [
+        {
+          "repo": "freecad.gears",
+          "file": "pygears/computation.py",
+          "symbol": "compute_shifted_gears",
+          "target": "dist",
+          "expression": "acos(m_n*(z1 + z2)/(2*a_w)*cos(alpha_n))",
+          "domain": {
+            "beta": 0
+          },
+          "note": "rearranged from dist = m(z1+z2)/2·cos α / cos α_w",
+          "tests": [
+            "tests/test_pygears_computation.py::test_positive_shifts_increase_centre_distance_and_working_angle"
+          ],
+          "line": 51,
+          "fingerprint": "2927e4c83232fbb9"
+        }
+      ],
+      "dayanera_tests": [
+        "tests/backend/test_calc_engine.py::test_gear_pair_ratio_and_working_pressure_angle"
+      ]
+    },
+    {
+      "id": "iso1328.single_pitch_tolerance",
+      "family": "iso1328_tolerance",
+      "name": "Single pitch tolerance",
+      "name_tr": "Tek adım toleransı",
+      "kind": "formula",
+      "output": "f_pT",
+      "expression": "(0.001*d + 0.4*m_n + 5)*sqrt(2)**(A - 5)",
+      "display": "f_pT = (0,001·d + 0,4·m_n + 5)·(√2)^(A−5)",
+      "matrix": "iso1328",
+      "assumptions": [
+        "yuvarlanmamış değer; ISO 1328-1:2013 5.2.3 yuvarlaması sonra uygulanır",
+        "Madde 1 kapsamı dışına ekstrapolasyon yapılmaz"
+      ],
+      "iso": {
+        "citation": "ISO 1328-1:2013 5.3.1, Formula (5); 5.2.2 step factor",
+        "evidence_ids": [
+          "iso1328.f5",
+          "iso1328.step",
+          "iso1328.scope"
+        ]
+      },
+      "engine": [
+        {
+          "calc_type": "iso1328_flank_tolerance",
+          "output_key": "f_pT"
+        }
+      ],
+      "observations": [],
+      "dayanera_tests": [
+        "tests/backend/test_calc_engine.py::test_iso1328_flank_tolerances_class_6"
+      ]
+    },
+    {
+      "id": "iso1328.total_cumulative_pitch_tolerance",
+      "family": "iso1328_tolerance",
+      "name": "Total cumulative pitch tolerance",
+      "name_tr": "Toplam kümülatif adım toleransı",
+      "kind": "formula",
+      "output": "F_pT",
+      "expression": "(0.002*d + 0.55*sqrt(d) + 0.7*m_n + 12)*sqrt(2)**(A - 5)",
+      "display": "F_pT = (0,002·d + 0,55·√d + 0,7·m_n + 12)·(√2)^(A−5)",
+      "matrix": "iso1328",
+      "iso": {
+        "citation": "ISO 1328-1:2013 5.3.2, Formula (6)",
+        "evidence_ids": [
+          "iso1328.f6",
+          "iso1328.step"
+        ]
+      },
+      "engine": [
+        {
+          "calc_type": "iso1328_flank_tolerance",
+          "output_key": "F_pT"
+        }
+      ],
+      "observations": [],
+      "dayanera_tests": [
+        "tests/backend/test_calc_engine.py::test_iso1328_flank_tolerances_class_6"
+      ]
+    },
+    {
+      "id": "iso1328.profile_slope_tolerance",
+      "family": "iso1328_tolerance",
+      "name": "Profile slope tolerance",
+      "name_tr": "Profil eğim toleransı",
+      "kind": "formula",
+      "output": "f_HaT",
+      "expression": "(0.4*m_n + 0.001*d + 4)*sqrt(2)**(A - 5)",
+      "display": "f_HαT = (0,4·m_n + 0,001·d + 4)·(√2)^(A−5)",
+      "matrix": "iso1328",
+      "iso": {
+        "citation": "ISO 1328-1:2013 5.3.3.1, Formula (7)",
+        "evidence_ids": [
+          "iso1328.f7",
+          "iso1328.step"
+        ]
+      },
+      "engine": [
+        {
+          "calc_type": "iso1328_flank_tolerance",
+          "output_key": "f_HaT"
+        }
+      ],
+      "observations": [],
+      "dayanera_tests": [
+        "tests/backend/test_calc_engine.py::test_iso1328_flank_tolerances_class_6"
+      ]
+    },
+    {
+      "id": "iso1328.profile_form_tolerance",
+      "family": "iso1328_tolerance",
+      "name": "Profile form tolerance",
+      "name_tr": "Profil form toleransı",
+      "kind": "formula",
+      "output": "f_faT",
+      "expression": "(0.55*m_n + 5)*sqrt(2)**(A - 5)",
+      "display": "f_fαT = (0,55·m_n + 5)·(√2)^(A−5)",
+      "matrix": "iso1328",
+      "iso": {
+        "citation": "ISO 1328-1:2013 5.3.3.2, Formula (8)",
+        "evidence_ids": [
+          "iso1328.f8",
+          "iso1328.step"
+        ]
+      },
+      "engine": [
+        {
+          "calc_type": "iso1328_flank_tolerance",
+          "output_key": "f_faT"
+        }
+      ],
+      "observations": [],
+      "dayanera_tests": [
+        "tests/backend/test_calc_engine.py::test_iso1328_flank_tolerances_class_6"
+      ]
+    },
+    {
+      "id": "iso1328.total_profile_tolerance",
+      "family": "iso1328_tolerance",
+      "name": "Total profile tolerance",
+      "name_tr": "Toplam profil toleransı",
+      "kind": "formula",
+      "output": "F_aT",
+      "expression": "sqrt(((0.4*m_n + 0.001*d + 4)*sqrt(2)**(A - 5))**2 + ((0.55*m_n + 5)*sqrt(2)**(A - 5))**2)",
+      "display": "F_αT = √(f_HαT² + f_fαT²) (unrounded components)",
+      "matrix": "iso1328",
+      "iso": {
+        "citation": "ISO 1328-1:2013 5.3.3.3, Formula (9)",
+        "evidence_ids": [
+          "iso1328.f9"
+        ]
+      },
+      "engine": [
+        {
+          "calc_type": "iso1328_flank_tolerance",
+          "output_key": "F_aT"
+        }
+      ],
+      "observations": [],
+      "dayanera_tests": [
+        "tests/backend/test_calc_engine.py::test_iso1328_flank_tolerances_class_6"
+      ]
+    },
+    {
+      "id": "iso1328.helix_slope_tolerance",
+      "family": "iso1328_tolerance",
+      "name": "Helix slope tolerance",
+      "name_tr": "Helis eğim toleransı",
+      "kind": "formula",
+      "output": "f_HbT",
+      "expression": "(0.05*sqrt(d) + 0.35*sqrt(b) + 4)*sqrt(2)**(A - 5)",
+      "display": "f_HβT = (0,05·√d + 0,35·√b + 4)·(√2)^(A−5)",
+      "matrix": "iso1328",
+      "iso": {
+        "citation": "ISO 1328-1:2013 5.3.4.1, Formula (10)",
+        "evidence_ids": [
+          "iso1328.f10",
+          "iso1328.step"
+        ]
+      },
+      "engine": [
+        {
+          "calc_type": "iso1328_flank_tolerance",
+          "output_key": "f_HbT"
+        }
+      ],
+      "observations": [],
+      "dayanera_tests": [
+        "tests/backend/test_calc_engine.py::test_iso1328_flank_tolerances_class_6"
+      ]
+    },
+    {
+      "id": "iso1328.helix_form_tolerance",
+      "family": "iso1328_tolerance",
+      "name": "Helix form tolerance",
+      "name_tr": "Helis form toleransı",
+      "kind": "formula",
+      "output": "f_fbT",
+      "expression": "(0.07*sqrt(d) + 0.45*sqrt(b) + 4)*sqrt(2)**(A - 5)",
+      "display": "f_fβT = (0,07·√d + 0,45·√b + 4)·(√2)^(A−5)",
+      "matrix": "iso1328",
+      "iso": {
+        "citation": "ISO 1328-1:2013 5.3.4.2, Formula (11)",
+        "evidence_ids": [
+          "iso1328.f11",
+          "iso1328.step"
+        ]
+      },
+      "engine": [
+        {
+          "calc_type": "iso1328_flank_tolerance",
+          "output_key": "f_fbT"
+        }
+      ],
+      "observations": [],
+      "dayanera_tests": [
+        "tests/backend/test_calc_engine.py::test_iso1328_flank_tolerances_class_6"
+      ]
+    },
+    {
+      "id": "iso1328.total_helix_tolerance",
+      "family": "iso1328_tolerance",
+      "name": "Total helix tolerance",
+      "name_tr": "Toplam helis toleransı",
+      "kind": "formula",
+      "output": "F_bT",
+      "expression": "sqrt(((0.05*sqrt(d) + 0.35*sqrt(b) + 4)*sqrt(2)**(A - 5))**2 + ((0.07*sqrt(d) + 0.45*sqrt(b) + 4)*sqrt(2)**(A - 5))**2)",
+      "display": "F_βT = √(f_HβT² + f_fβT²) (unrounded components)",
+      "matrix": "iso1328",
+      "iso": {
+        "citation": "ISO 1328-1:2013 5.3.4.3, Formula (12)",
+        "evidence_ids": [
+          "iso1328.f12"
+        ]
+      },
+      "engine": [
+        {
+          "calc_type": "iso1328_flank_tolerance",
+          "output_key": "F_bT"
+        }
+      ],
+      "observations": [],
+      "dayanera_tests": [
+        "tests/backend/test_calc_engine.py::test_iso1328_flank_tolerances_class_6"
+      ]
+    },
+    {
+      "id": "gear.involute.function",
+      "family": "involute",
+      "name": "Involute function",
+      "name_tr": "Evolvent fonksiyonu",
+      "kind": "formula",
+      "output": "inv_alpha",
+      "expression": "tan(alpha) - alpha",
+      "display": "inv α = tan α − α (α in radians)",
+      "matrix": "involute",
+      "applicability": {
+        "tooth_form": [
+          "spur",
+          "helical (transverse section)"
+        ]
+      },
+      "iso": {
+        "citation": "ISO 21771:2007 defines the involute function; no DAYANERA evidence requirement anchors it yet",
+        "evidence_ids": []
+      },
+      "observations": [
+        {
+          "repo": "freecad.gears",
+          "file": "pygears/computation.py",
+          "symbol": "compute_shifted_gears.inv",
+          "target": "return",
+          "expression": "tan(alpha) - alpha",
+          "line": 40,
+          "fingerprint": "867d02314d75d1cf"
+        },
+        {
+          "repo": "cq_gears",
+          "file": "cq_gears/spur_gear.py",
+          "symbol": "SpurGear.__init__",
+          "target": "inv_a0",
+          "expression": "tan(alpha) - alpha",
+          "line": 87,
+          "fingerprint": "ac57fd5f41dc6349"
+        },
+        {
+          "repo": "bd_warehouse",
+          "file": "src/bd_warehouse/gear.py",
+          "symbol": "InvoluteToothProfile.__init__",
+          "target": "involute",
+          "expression": "tan(alpha) - alpha",
+          "line": 175,
+          "fingerprint": "d99629cd52a3d0bd"
+        },
+        {
+          "repo": "FreeCAD",
+          "file": "src/Mod/PartDesign/fcgear/involute.py",
+          "symbol": "genInvolutePolar",
+          "target": "return",
+          "expression": "sqrt((r_b/cos(alpha))**2 - r_b**2)/r_b - acos(r_b/(r_b/cos(alpha)))",
+          "note": "polar angle of the involute at radius R = r_b / cos α",
+          "line": 348,
+          "fingerprint": "5db4ddc3aed94c34"
+        }
+      ],
+      "dayanera_tests": [
+        "tests/backend/test_knowledge_registry.py::test_status_counts_and_candidates"
+      ]
+    },
+    {
+      "id": "gear.involute.radius_at_roll_angle",
+      "family": "involute",
+      "name": "Involute radius at roll angle",
+      "name_tr": "Açılma açısında evolvent yarıçapı",
+      "kind": "formula",
+      "output": "r_y",
+      "expression": "r_b*sqrt(1 + phi**2)",
+      "display": "r_y = r_b·√(1 + φ²)",
+      "matrix": "involute_roll",
+      "iso": {
+        "citation": "involute geometry (definition of the circle involute)",
+        "evidence_ids": []
+      },
+      "observations": [
+        {
+          "repo": "freecad.gears",
+          "file": "pygears/involute_tooth.py",
+          "symbol": "InvoluteTooth.involute_function_x.func",
+          "target": "return",
+          "expression": "sqrt((r_b*cos(phi) + phi*r_b*sin(phi))**2 + (r_b*sin(phi) - phi*r_b*cos(phi))**2)",
+          "note": "x(φ) here and y(φ) in involute_function_y",
+          "tests": [
+            "tests/test_pygears_involute.py::test_involute_parametric_radius"
+          ],
+          "line": 258,
+          "fingerprint": "23218b4c68fe8e65"
+        }
+      ],
+      "dayanera_tests": [
+        "tests/backend/test_knowledge_registry.py::test_status_counts_and_candidates"
+      ]
+    },
+    {
+      "id": "gear.pair.working_pressure_angle_profile_shift",
+      "family": "gear_pair",
+      "name": "Working pressure angle of a profile-shifted external pair",
+      "name_tr": "Profil kaydırmalı dış çiftte çalışma kavrama açısı",
+      "kind": "formula",
+      "output": "inv_alpha_wt",
+      "expression": "inv(alpha_t) + 2*tan(alpha_n)*(x1 + x2)/(z1 + z2)",
+      "display": "inv α_wt = inv α_t + 2·tan α_n·(x1 + x2)/(z1 + z2)",
+      "matrix": "pair_shift",
+      "derive": true,
+      "applicability": {
+        "gear_kind": [
+          "external pair"
+        ],
+        "tooth_form": [
+          "spur",
+          "helical"
+        ],
+        "backlash": "zero-backlash mesh"
+      },
+      "iso": {
+        "citation": "ISO 21771:2007 5.2.4 (involute relation); no DAYANERA evidence requirement anchors it yet",
+        "evidence_ids": []
+      },
+      "engine_consistency": "pair_shift_roundtrip",
+      "observations": [
+        {
+          "repo": "freecad.gears",
+          "file": "pygears/computation.py",
+          "symbol": "compute_shifted_gears",
+          "target": "inv_alpha_w",
+          "expression": "inv(alpha_n) + 2*tan(alpha_n)*(x1 + x2)/(z1 + z2)",
+          "domain": {
+            "beta": 0
+          },
+          "tests": [
+            "tests/test_pygears_computation.py::test_equal_and_opposite_shifts_cancel",
+            "tests/test_pygears_computation.py::test_positive_shifts_increase_centre_distance_and_working_angle"
+          ],
+          "line": 42,
+          "fingerprint": "6c2ee4b47e2320de"
+        }
+      ],
+      "dayanera_tests": [
+        "tests/backend/test_knowledge_registry.py::test_candidate_pair_rules_are_consistent_with_engine"
+      ]
+    },
+    {
+      "id": "gear.pair.working_centre_distance",
+      "family": "gear_pair",
+      "name": "Working centre distance",
+      "name_tr": "Çalışma eksen mesafesi",
+      "kind": "formula",
+      "output": "a_w",
+      "expression": "a*cos(alpha_t)/cos(alpha_wt)",
+      "display": "a_w = a·cos α_t / cos α_wt",
+      "matrix": "pair_shift",
+      "derive": true,
+      "applicability": {
+        "gear_kind": [
+          "external pair"
+        ],
+        "tooth_form": [
+          "spur",
+          "helical"
+        ]
+      },
+      "iso": {
+        "citation": "ISO 21771:2007 5.2.4 (inverse of Eq. (54)); anchored only through the engine round trip",
+        "evidence_ids": []
+      },
+      "engine_consistency": "pair_shift_roundtrip",
+      "observations": [
+        {
+          "repo": "freecad.gears",
+          "file": "pygears/computation.py",
+          "symbol": "compute_shifted_gears",
+          "target": "dist",
+          "expression": "m_n*(z1 + z2)/2*cos(alpha_n)/cos(alpha_wt)",
+          "domain": {
+            "beta": 0
+          },
+          "tests": [
+            "tests/test_pygears_computation.py::test_unshifted_gears_keep_standard_centre_distance"
+          ],
+          "line": 51,
+          "fingerprint": "2927e4c83232fbb9"
+        }
+      ],
+      "dayanera_tests": [
+        "tests/backend/test_knowledge_registry.py::test_candidate_pair_rules_are_consistent_with_engine"
+      ]
+    },
+    {
+      "id": "gear.pair.reference_centre_distance",
+      "family": "gear_pair",
+      "name": "Reference centre distance",
+      "name_tr": "Referans eksen mesafesi",
+      "kind": "formula",
+      "output": "a",
+      "expression": "m_n*(z1 + z2)/(2*cos(beta))",
+      "display": "a = (d1 + d2)/2 = m_n(z1 + z2)/(2 cos β)",
+      "matrix": "pair",
+      "derive": true,
+      "applicability": {
+        "gear_kind": [
+          "external pair"
+        ],
+        "tooth_form": [
+          "spur",
+          "helical"
+        ]
+      },
+      "iso": {
+        "citation": "ISO 21771:2007 (sum of reference radii); no DAYANERA evidence requirement anchors it yet",
+        "evidence_ids": []
+      },
+      "engine_consistency": "pair_reference_centre_distance",
+      "observations": [
+        {
+          "repo": "freecad.gears",
+          "file": "pygears/computation.py",
+          "symbol": "compute_shifted_gears",
+          "target": "dist",
+          "expression": "m_n*(z1 + z2)/2",
+          "domain": {
+            "beta": 0
+          },
+          "note": "unshifted case (α_w = α)",
+          "tests": [
+            "tests/test_pygears_computation.py::test_unshifted_gears_keep_standard_centre_distance"
+          ],
+          "line": 51,
+          "fingerprint": "2927e4c83232fbb9"
+        }
+      ],
+      "dayanera_tests": [
+        "tests/backend/test_knowledge_registry.py::test_candidate_pair_rules_are_consistent_with_engine"
+      ]
+    },
+    {
+      "id": "gear.internal.working_pressure_angle_profile_shift",
+      "family": "internal_pair",
+      "name": "Working pressure angle of a profile-shifted internal pair",
+      "name_tr": "Profil kaydırmalı iç çiftte çalışma kavrama açısı",
+      "kind": "formula",
+      "output": "inv_alpha_wt_int",
+      "expression": "inv(alpha_n) + 2*tan(alpha_n)*(x2 - x1)/(z2 - z1)",
+      "display": "inv α_w = inv α + 2·tan α·(x2 − x1)/(z2 − z1)  (z2 = ring)",
+      "matrix": "internal",
+      "derive": true,
+      "applicability": {
+        "gear_kind": [
+          "internal pair"
+        ],
+        "tooth_form": [
+          "spur"
+        ]
+      },
+      "iso": {
+        "citation": "not anchored in the DAYANERA corpus",
+        "evidence_ids": []
+      },
+      "observations": [
+        {
+          "repo": "freecad.gears",
+          "file": "pygears/computation.py",
+          "symbol": "compute_shifted_internal_gears",
+          "target": "inv_alpha_w",
+          "expression": "inv(alpha_n) + 2*tan(alpha_n)*(x2 - x1)/(z2 - z1)",
+          "tests": [
+            "tests/test_pygears_planetary.py::test_internal_pair_distance_matches_external_for_equal_shift"
+          ],
+          "line": 75,
+          "fingerprint": "daca31b867ec2dd9"
+        }
+      ],
+      "dayanera_tests": [
+        "tests/backend/test_knowledge_registry.py::test_status_counts_and_candidates"
+      ]
+    },
+    {
+      "id": "gear.internal.working_centre_distance",
+      "family": "internal_pair",
+      "name": "Working centre distance of an internal pair",
+      "name_tr": "İç çiftte çalışma eksen mesafesi",
+      "kind": "formula",
+      "output": "a_w_int",
+      "expression": "m_n*(z2 - z1)/2*cos(alpha_n)/cos(alpha_wt_int)",
+      "display": "a_w = m(z2 − z1)/2 · cos α / cos α_w",
+      "matrix": "internal",
+      "applicability": {
+        "gear_kind": [
+          "internal pair"
+        ],
+        "tooth_form": [
+          "spur"
+        ]
+      },
+      "iso": {
+        "citation": "not anchored in the DAYANERA corpus",
+        "evidence_ids": []
+      },
+      "observations": [
+        {
+          "repo": "freecad.gears",
+          "file": "pygears/computation.py",
+          "symbol": "compute_shifted_internal_gears",
+          "target": "dist",
+          "expression": "m_n*(z2 - z1)/2*cos(alpha_n)/cos(alpha_wt_int)",
+          "tests": [
+            "tests/test_pygears_planetary.py::test_planetary_distances_match_for_unshifted_gears"
+          ],
+          "line": 84,
+          "fingerprint": "05b75dfa752b3ffc"
+        }
+      ],
+      "dayanera_tests": [
+        "tests/backend/test_knowledge_registry.py::test_status_counts_and_candidates"
+      ]
+    },
+    {
+      "id": "gear.helical.twist_angle",
+      "family": "helical",
+      "name": "Twist of the transverse section over the facewidth",
+      "name_tr": "Diş genişliği boyunca alın kesiti dönmesi",
+      "kind": "formula",
+      "output": "phi_twist",
+      "expression": "2*b*tan(beta)/d",
+      "display": "φ = 2·b·tan β / d = 2π·b / p_z",
+      "identities": [
+        "2*pi*b/(pi*d/tan(beta))"
+      ],
+      "matrix": "helical",
+      "applicability": {
+        "tooth_form": [
+          "helical",
+          "double helical (per half)"
+        ]
+      },
+      "iso": {
+        "citation": "helix geometry (lead p_z = π·d / tan β); no DAYANERA evidence requirement anchors it yet",
+        "evidence_ids": []
+      },
+      "observations": [
+        {
+          "repo": "freecad.gears",
+          "file": "freecad/gears/involutegear.py",
+          "symbol": "InvoluteGear.generate_gear_shape",
+          "target": "twist_angle",
+          "expression": "b*tan(beta)*2/d",
+          "line": 448,
+          "fingerprint": "8f7a38e0f76dbda2"
+        },
+        {
+          "repo": "cq_gears",
+          "file": "cq_gears/spur_gear.py",
+          "symbol": "SpurGear.__init__",
+          "target": "self.twist_angle",
+          "expression": "b/((d/2)*tan(pi/2 - beta))",
+          "line": 97,
+          "fingerprint": "431d77d2cd179d6e"
+        },
+        {
+          "repo": "bd_warehouse",
+          "file": "src/bd_warehouse/gear.py",
+          "symbol": "HelicalGear.__init__",
+          "target": "self.twist_angle",
+          "expression": "b*tan(beta)/(d/2)",
+          "note": "degrees(...) in the source; normalized to radians",
+          "line": 723,
+          "fingerprint": "b698d3fbcbfe759d"
+        }
+      ],
+      "dayanera_tests": [
+        "tests/backend/test_knowledge_registry.py::test_status_counts_and_candidates"
+      ]
+    },
+    {
+      "id": "gear.helical.lead",
+      "family": "helical",
+      "name": "Lead of a helical gear",
+      "name_tr": "Helisel dişlinin hatvesi",
+      "kind": "formula",
+      "output": "p_z",
+      "expression": "pi*d/tan(beta)",
+      "display": "p_z = π·d / tan β",
+      "matrix": "helical",
+      "applicability": {
+        "tooth_form": [
+          "helical"
+        ],
+        "valid_ranges": "β > 0"
+      },
+      "iso": {
+        "citation": "ISO 21771:2007 (lead); no DAYANERA evidence requirement anchors it yet",
+        "evidence_ids": []
+      },
+      "observations": [
+        {
+          "repo": "bd_warehouse",
+          "file": "src/bd_warehouse/gear.py",
+          "symbol": "HelicalGear.__init__",
+          "target": "self.lead",
+          "expression": "2*pi*(d/2)/abs(tan(beta))",
+          "tests": [
+            "tests/test_gears.py::test_zero_angle_helical_gear_matches_spur_gear"
+          ],
+          "line": 724,
+          "fingerprint": "8c97af4ac2a13068"
+        }
+      ],
+      "dayanera_tests": [
+        "tests/backend/test_knowledge_registry.py::test_status_counts_and_candidates"
+      ]
+    },
+    {
+      "id": "gear.cyl.transverse_tooth_thickness",
+      "family": "tooth_thickness",
+      "name": "Transverse tooth thickness at the reference circle",
+      "name_tr": "Referans dairede alın diş kalınlığı",
+      "kind": "formula",
+      "output": "s_t",
+      "expression": "m_t*(pi/2 + 2*x*cos(beta)*tan(alpha_t))",
+      "display": "s_t = m_t(π/2 + 2·x·cos β·tan α_t)   (zero backlash)",
+      "identities": [
+        "m_n*(pi/2 + 2*x*tan(alpha_n))/cos(beta)"
+      ],
+      "matrix": "cylindrical",
+      "derive": true,
+      "applicability": {
+        "gear_kind": [
+          "external"
+        ],
+        "tooth_form": [
+          "spur",
+          "helical"
+        ],
+        "profile_shift": "included",
+        "backlash": "nominal (no thickness allowance)"
+      },
+      "iso": {
+        "citation": "ISO 21771:2007 (tooth thickness); no DAYANERA evidence requirement anchors it yet",
+        "evidence_ids": []
+      },
+      "observations": [
+        {
+          "repo": "freecad.gears",
+          "file": "pygears/involute_tooth.py",
+          "symbol": "InvoluteTooth._calc_gear_factors",
+          "target": "self.involute_rot2",
+          "expression": "d*((pi/2 + 2*x*cos(beta)*tan(alpha_t))/z)",
+          "note": "involute_rot2 is the half-thickness angle s_t/d (normal-system branch)",
+          "tests": [
+            "tests/test_pygears_involute.py::test_properties_from_tool_uses_transverse_module_and_pressure_angle"
+          ],
+          "line": 147,
+          "fingerprint": "a07d69621d14039e"
+        },
+        {
+          "repo": "cq_gears",
+          "file": "cq_gears/spur_gear.py",
+          "symbol": "SpurGear.__init__",
+          "target": "s0",
+          "expression": "m_n*(pi/2)",
+          "domain": {
+            "x": 0,
+            "beta": 0
+          },
+          "note": "backlash = 0",
+          "line": 85,
+          "fingerprint": "05fcc0469edaca07"
+        },
+        {
+          "repo": "cq_gears",
+          "file": "cq_gears/crossed_helical_gear.py",
+          "symbol": "CrossedHelicalGear.__init__",
+          "target": "s0",
+          "expression": "(m_t*z/2)*pi/z",
+          "domain": {
+            "x": 0
+          },
+          "line": 57,
+          "fingerprint": "e6f221bdf7f183c6"
+        }
+      ],
+      "dayanera_tests": [
+        "tests/backend/test_knowledge_registry.py::test_status_counts_and_candidates"
+      ]
+    },
+    {
+      "id": "gear.cyl.normal_tooth_thickness",
+      "family": "tooth_thickness",
+      "name": "Normal tooth thickness at the reference cylinder",
+      "name_tr": "Referans silindirde normal diş kalınlığı",
+      "kind": "formula",
+      "output": "s_n",
+      "expression": "m_n*(pi/2 + 2*x*tan(alpha_n))",
+      "display": "s_n = m_n(π/2 + 2·x·tan α_n) = s_t·cos β",
+      "identities": [
+        "s_t*cos(beta)"
+      ],
+      "matrix": "cylindrical",
+      "derived_from": [
+        "gear.cyl.transverse_module",
+        "gear.cyl.transverse_pressure_angle"
+      ],
+      "applicability": {
+        "gear_kind": [
+          "external"
+        ],
+        "tooth_form": [
+          "spur",
+          "helical"
+        ],
+        "profile_shift": "included"
+      },
+      "iso": {
+        "citation": "ISO 21771:2007 (tooth thickness); no DAYANERA evidence requirement anchors it yet",
+        "evidence_ids": []
+      },
+      "observations": [],
+      "dayanera_tests": [
+        "tests/backend/test_knowledge_registry.py::test_status_counts_and_candidates"
+      ]
+    },
+    {
+      "id": "gear.cyl.tooth_thickness_at_diameter",
+      "family": "tooth_thickness",
+      "name": "Transverse tooth thickness at any diameter",
+      "name_tr": "Herhangi bir çapta alın diş kalınlığı",
+      "kind": "formula",
+      "output": "s_yt",
+      "expression": "d_y*(s_t/d + inv(alpha_t) - inv(acos(d_b/d_y)))",
+      "display": "s_yt = d_y·(s_t/d + inv α_t − inv α_yt),  cos α_yt = d_b / d_y",
+      "matrix": "cylindrical_dy",
+      "applicability": {
+        "gear_kind": [
+          "external"
+        ],
+        "tooth_form": [
+          "spur",
+          "helical (transverse section)"
+        ],
+        "valid_ranges": "d_b ≤ d_y ≤ d_a"
+      },
+      "iso": {
+        "citation": "ISO 21771:2007 (tooth thickness at a diameter); no DAYANERA evidence requirement anchors it yet",
+        "evidence_ids": []
+      },
+      "observations": [
+        {
+          "repo": "cq_gears",
+          "file": "cq_gears/spur_gear.py",
+          "symbol": "SpurGear.__init__",
+          "target": "s",
+          "expression": "2*((d_y/2)*((m_n*pi/2)/(m_n*z) + inv(alpha_n) - inv(acos((m_n*z/2)/(d_y/2)*cos(alpha_n)))))",
+          "domain": {
+            "x": 0,
+            "beta": 0
+          },
+          "note": "the source computes the half thickness arc r·(s0/d0 + inv α0 − inv α)",
+          "line": 110,
+          "fingerprint": "f5e8f9ecb4f189d0"
+        }
+      ],
+      "dayanera_tests": [
+        "tests/backend/test_knowledge_registry.py::test_status_counts_and_candidates"
+      ]
+    },
+    {
+      "id": "gear.cyl.non_involute_root_flank",
+      "family": "tip_root_diameter",
+      "name": "Base circle above the root circle (non-involute root flank)",
+      "name_tr": "Temel dairenin diş dibi dairesinin üstünde kalması",
+      "kind": "sign_condition",
+      "output": "d_minus_root",
+      "expression": "d_b - d_f",
+      "display": "d_b > d_f ⇒ the flank between d_f and d_b is not an involute (fillet/trochoid)",
+      "matrix": "cylindrical",
+      "derived_from": [
+        "gear.cyl.base_diameter",
+        "gear.cyl.root_diameter"
+      ],
+      "iso": {
+        "citation": "geometric consequence of Eq. (19) and Eq. (34); not an ISO formula",
+        "evidence_ids": []
+      },
+      "observations": [
+        {
+          "repo": "freecad.gears",
+          "file": "pygears/involute_tooth.py",
+          "symbol": "InvoluteTooth._calc_gear_factors",
+          "target": "if:self.dg <= self.df",
+          "expression": "d_b - d_f",
+          "tests": [
+            "tests/test_pygears_involute.py::test_involute_start_when_base_circle_inside_root"
+          ],
+          "line": 158,
+          "fingerprint": "69a6cceb7e05234c"
+        },
+        {
+          "repo": "cq_gears",
+          "file": "cq_gears/spur_gear.py",
+          "symbol": "SpurGear.__init__",
+          "target": "self.rr",
+          "expression": "cos(alpha_n)*m_n*z - (m_n*z - 2*h_fP_star*m_n)",
+          "domain": {
+            "x": 0,
+            "beta": 0
+          },
+          "note": "rr = max(rb, rd)",
+          "line": 93,
+          "fingerprint": "46db0639bd9d13e1"
+        },
+        {
+          "repo": "FreeCAD",
+          "file": "src/Mod/PartDesign/fcgear/involute.py",
+          "symbol": "_create_involute_profile",
+          "target": "has_non_involute_flank",
+          "expression": null,
+          "note": "compares with the fillet end radius, not the root circle: not numerically comparable",
+          "line": 157,
+          "fingerprint": "f291a1a465078778"
+        }
+      ],
+      "dayanera_tests": [
+        "tests/backend/test_knowledge_registry.py::test_status_counts_and_candidates"
+      ]
+    },
+    {
+      "id": "gear.planetary.ring_teeth",
+      "family": "planetary",
+      "name": "Ring tooth count of a simple planetary set",
+      "name_tr": "Basit planet dişli takımında halka diş sayısı",
+      "kind": "formula",
+      "output": "z_ring",
+      "expression": "z_sun + 2*z_planet",
+      "display": "z_ring = z_sun + 2·z_planet (same module, no profile shift)",
+      "matrix": "planetary",
+      "derive": true,
+      "iso": {
+        "citation": "not anchored in the DAYANERA corpus",
+        "evidence_ids": []
+      },
+      "observations": [
+        {
+          "repo": "freecad.gears",
+          "file": "pygears/computation.py",
+          "symbol": "compute_planetary_gears",
+          "target": "z_ring",
+          "expression": "z_sun + 2*z_planet",
+          "tests": [
+            "tests/test_pygears_planetary.py::test_planetary_ring_teeth_constraint"
+          ],
+          "line": 205,
+          "fingerprint": "33945a0ceb69d1fa"
+        },
+        {
+          "repo": "cq_gears",
+          "file": "cq_gears/ring_gear.py",
+          "symbol": "PlanetaryGearset.__init__",
+          "target": "ring_z",
+          "expression": "z_sun + 2*z_planet",
+          "line": 259,
+          "fingerprint": "c81ee81851253afa"
+        }
+      ],
+      "dayanera_tests": [
+        "tests/backend/test_knowledge_registry.py::test_status_counts_and_candidates"
+      ]
+    },
+    {
+      "id": "gear.planetary.assembly_condition",
+      "family": "planetary",
+      "name": "Assembly condition for equally spaced planets",
+      "name_tr": "Eşit aralıklı planetler için montaj koşulu",
+      "kind": "zero_condition",
+      "output": "assembly_residue",
+      "expression": "fmod(z_sun + z_ring, n_p)",
+      "display": "(z_sun + z_ring) / n_p must be an integer",
+      "matrix": "planetary",
+      "iso": {
+        "citation": "not anchored in the DAYANERA corpus",
+        "evidence_ids": []
+      },
+      "observations": [
+        {
+          "repo": "freecad.gears",
+          "file": "pygears/computation.py",
+          "symbol": "compute_planetary_gears",
+          "target": "spacing_sum",
+          "expression": "fmod(z_sun + z_ring, n_p)",
+          "tests": [
+            "tests/test_pygears_planetary.py::test_planetary_assembly_condition_fails"
+          ],
+          "line": 229,
+          "fingerprint": "5da3ee4958add149"
+        },
+        {
+          "repo": "cq_gears",
+          "file": "cq_gears/ring_gear.py",
+          "symbol": "PlanetaryGearset.__init__",
+          "target": "if:(sun_teeth_number + planet_teeth_number) % n_planets",
+          "expression": "min(fmod(z_sun + z_planet, n_p), max(fmod(z_sun, n_p), fmod(z_ring, n_p)))",
+          "note": "stricter test: rejects assemblable sets such as z_sun = 13, z_planet = 14, n_p = 2",
+          "line": 282,
+          "fingerprint": "d685205e93f46255"
+        }
+      ],
+      "dayanera_tests": [
+        "tests/backend/test_knowledge_registry.py::test_external_conflicts_are_recorded"
+      ]
+    },
+    {
+      "id": "gear.planetary.ratio_ring_fixed",
+      "family": "planetary",
+      "name": "Planetary ratio with the ring fixed",
+      "name_tr": "Halka sabitken planet oranı",
+      "kind": "formula",
+      "output": "i_ring_fixed",
+      "expression": "1 + z_ring/z_sun",
+      "display": "i = 1 + z_ring / z_sun (sun input, carrier output)",
+      "matrix": "planetary",
+      "iso": {
+        "citation": "not anchored in the DAYANERA corpus",
+        "evidence_ids": []
+      },
+      "observations": [
+        {
+          "repo": "freecad.gears",
+          "file": "pygears/computation.py",
+          "symbol": "compute_planetary_gears",
+          "target": "ratio_ring_fixed",
+          "expression": "(z_sun + z_ring)/z_sun",
+          "tests": [
+            "tests/test_pygears_planetary.py::test_planetary_ratio_with_ring_fixed"
+          ],
+          "line": 266,
+          "fingerprint": "d08752a52cb53c39"
+        }
+      ],
+      "dayanera_tests": [
+        "tests/backend/test_knowledge_registry.py::test_status_counts_and_candidates"
+      ]
+    },
+    {
+      "id": "gear.planetary.ring_phase_cad_convention",
+      "family": "planetary",
+      "name": "Ring phase angle used by a CAD generator",
+      "name_tr": "CAD üretecinin halka faz açısı",
+      "kind": "formula",
+      "output": "ring_phase_deg",
+      "expression": "180*(z_planet + 1)/z_ring",
+      "display": "ring phase = 180°·(z_planet + 1)/z_ring",
+      "authority_scope": "implementation_convention",
+      "matrix": "planetary",
+      "iso": {
+        "citation": "none: depends on the tooth orientation of the freecad.gears profiles",
+        "evidence_ids": []
+      },
+      "observations": [
+        {
+          "repo": "freecad.gears",
+          "file": "pygears/computation.py",
+          "symbol": "planetary_phase_angles",
+          "target": "ring_angle",
+          "expression": "180*(z_planet + 1)/z_ring",
+          "tests": [
+            "tests/test_pygears_planetary.py::test_phase_angles_mesh"
+          ],
+          "line": 153,
+          "fingerprint": "ecfc8558e08862ed"
+        }
+      ],
+      "dayanera_tests": [
+        "tests/backend/test_knowledge_registry.py::test_status_counts_and_candidates"
+      ]
+    },
+    {
+      "id": "gear.worm.lead_angle",
+      "family": "worm",
+      "name": "Worm lead angle",
+      "name_tr": "Sonsuz vida helis (hatve) açısı",
+      "kind": "formula",
+      "output": "gamma",
+      "expression": "atan(z_1*m/d_1)",
+      "display": "tan γ = z_1·m / d_1 = z_1 / q",
+      "matrix": "worm",
+      "applicability": {
+        "gear_kind": [
+          "worm"
+        ],
+        "module": "axial module"
+      },
+      "iso": {
+        "citation": "not anchored in the DAYANERA corpus",
+        "evidence_ids": []
+      },
+      "observations": [
+        {
+          "repo": "freecad.gears",
+          "file": "freecad/gears/wormgear.py",
+          "symbol": "WormGear.generate_gear_shape",
+          "target": "beta",
+          "expression": "atan(m*z_1/d_1)",
+          "line": 112,
+          "fingerprint": "ff320ecbfdbeb3e2"
+        },
+        {
+          "repo": "cq_gears",
+          "file": "cq_gears/worm_gear.py",
+          "symbol": "Worm.__init__",
+          "target": "d0",
+          "expression": "atan(z_1*m/d_1)",
+          "note": "rearranged from d0 = n·m / |tan γ|",
+          "line": 47,
+          "fingerprint": "61680bf4cabfc794"
+        },
+        {
+          "repo": "bd_warehouse",
+          "file": "src/bd_warehouse/gear.py",
+          "symbol": "_WormGeometry.__init__",
+          "target": "gamma",
+          "expression": "atan(z_1/(d_1/m))",
+          "tests": [
+            "tests/test_gears.py::test_worm_dimensions"
+          ],
+          "line": 858,
+          "fingerprint": "885ff7877f1e5aec"
+        }
+      ],
+      "dayanera_tests": [
+        "tests/backend/test_knowledge_registry.py::test_status_counts_and_candidates"
+      ]
+    },
+    {
+      "id": "gear.worm.lead",
+      "family": "worm",
+      "name": "Worm lead",
+      "name_tr": "Sonsuz vida hatvesi",
+      "kind": "formula",
+      "output": "p_z1",
+      "expression": "pi*m*z_1",
+      "display": "p_z1 = π·m·z_1",
+      "matrix": "worm",
+      "applicability": {
+        "gear_kind": [
+          "worm"
+        ],
+        "module": "axial module"
+      },
+      "iso": {
+        "citation": "not anchored in the DAYANERA corpus",
+        "evidence_ids": []
+      },
+      "observations": [
+        {
+          "repo": "bd_warehouse",
+          "file": "src/bd_warehouse/gear.py",
+          "symbol": "_WormGeometry.__init__",
+          "target": "self.lead",
+          "expression": "pi*m*z_1",
+          "tests": [
+            "tests/test_gears.py::test_worm_dimensions"
+          ],
+          "line": 856,
+          "fingerprint": "d3cc512a3527efe9"
+        },
+        {
+          "repo": "cq_gears",
+          "file": "cq_gears/worm_gear.py",
+          "symbol": "Worm._build_tooth_faces",
+          "target": "ttx",
+          "expression": "m*pi*z_1",
+          "line": 102,
+          "fingerprint": "fb4cbc32e897eb02"
+        }
+      ],
+      "dayanera_tests": [
+        "tests/backend/test_knowledge_registry.py::test_status_counts_and_candidates"
+      ]
+    },
+    {
+      "id": "gear.involute.derivative_claim_freecad_gears",
+      "family": "involute",
+      "name": "Derivative of the involute function used as a Newton step",
+      "name_tr": "Evolvent fonksiyonunun türevi (Newton adımı)",
+      "kind": "derivative_claim",
+      "output": "d_inv_alpha",
+      "expression": "1/cos(alpha) - 1",
+      "of": "tan(alpha) - alpha",
+      "wrt": "alpha",
+      "display": "claimed: d(inv α)/dα = 1/cos α − 1   (true: tan² α)",
+      "matrix": "involute",
+      "iso": {
+        "citation": "calculus identity check (d/dα (tan α − α) = tan² α)",
+        "evidence_ids": []
+      },
+      "observations": [
+        {
+          "repo": "freecad.gears",
+          "file": "pygears/computation.py",
+          "symbol": "compute_shifted_gears.d_root_inv",
+          "target": "return",
+          "expression": "1/cos(alpha) - 1",
+          "line": 48,
+          "fingerprint": "ccb734bf52350dab"
+        }
+      ],
+      "implementation_notes": "Harmless in freecad.gears: the damped Newton iteration still converges because the sign is right, and the root is checked on |f|. DAYANERA does not adopt it: app.knowledge.expr.involute_inverse uses bisection.",
+      "dayanera_tests": [
+        "tests/backend/test_knowledge_registry.py::test_rejected_derivative_claim"
+      ]
+    }
+  ]
+}

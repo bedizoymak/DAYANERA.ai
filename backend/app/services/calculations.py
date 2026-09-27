@@ -17,10 +17,12 @@ from app.calc.engine import ENGINE_VERSION, CalculationEngine
 from app.calc.evidence import PageRecord, find_in_pages
 from app.calc.rules import RULES
 from app.calc.types import CalcRequest, CalcResult, EvidenceMatch, EvidenceRequirement, InputValue, Provenance
+from app.core.config import get_settings
 from app.db.models import Calculation, Document, ExtractedValue, MemoryItem
 from app.inference.base import GenerationOptions, LLMProvider, ProviderError
 from app.inference.prompts import calc_draft_messages, calc_mapping_messages
-from app.services import audit
+from app.knowledge.diagnosis import CLASS_LABEL_TR
+from app.services import audit, self_maintenance
 from app.services.access import ScopeSet, can_view_document
 from app.services.auth import AuthenticatedUser
 
@@ -143,23 +145,41 @@ def _m(d: dict):
     return ChatMessage(role=d["role"], content=d["content"])
 
 
-def llm_draft(provider: LLMProvider, calc_type: str, inputs: dict[str, InputValue]) -> dict[str, Any]:
+DRAFT_OUTPUTS: dict[str, list[str]] = {
+    "cylindrical_gear_geometry": ["m_t", "alpha_t", "d", "d_b", "p_n", "p_t", "p_bt", "h_a", "h_f", "h", "d_a", "d_f"],
+    "transverse_module": ["m_t"],
+    "gear_pair": ["u", "d1", "d2", "alpha_t", "alpha_wt"],
+    "iso1328_flank_tolerance": ["f_pT", "F_pT", "f_HaT", "f_faT", "F_aT", "f_HbT", "f_fbT", "F_bT"],
+    "iso286_it_tolerance": ["IT"],
+    "iso286_hole_H": ["IT", "EI", "ES", "lower_size", "upper_size"],
+    "iso286_shaft_h": ["IT", "es", "ei", "lower_size", "upper_size"],
+}
+
+
+def knowledge_for_draft(db: Session, calc_type: str) -> dict[str, Any]:
+    """VERIFIED formulas / corrections for a Qwen draft (self-maintenance retrieval; never candidates)."""
+    settings = get_settings()
+    if not settings.self_maintenance_enabled:
+        return {"text": "", "formula_ids": [], "correction_ids": []}
+    return self_maintenance.retrieve_context(db, calc_type, DRAFT_OUTPUTS.get(calc_type, []),
+                                             settings.knowledge_context_mode)
+
+
+def llm_draft(provider: LLMProvider, calc_type: str, inputs: dict[str, InputValue],
+              knowledge: dict[str, Any] | None = None) -> dict[str, Any]:
     rule = RULES[calc_type]
     in_desc = {k: {"value": v.value, "unit": v.unit} for k, v in inputs.items()}
-    outputs = {
-        "cylindrical_gear_geometry": ["m_t", "alpha_t", "d", "d_b", "p_n", "p_t", "p_bt", "h_a", "h_f", "h", "d_a", "d_f"],
-        "transverse_module": ["m_t"],
-        "gear_pair": ["u", "d1", "d2", "alpha_t", "alpha_wt"],
-        "iso1328_flank_tolerance": ["f_pT", "F_pT", "f_HaT", "f_faT", "F_aT", "f_HbT", "f_fbT", "F_bT"],
-        "iso286_it_tolerance": ["IT"],
-        "iso286_hole_H": ["IT", "EI", "ES", "lower_size", "upper_size"],
-        "iso286_shaft_h": ["IT", "es", "ei", "lower_size", "upper_size"],
-    }[calc_type]
-    res = provider.chat([_m(x) for x in calc_draft_messages(rule.title, in_desc, [{"key": k} for k in outputs])],
+    outputs = DRAFT_OUTPUTS[calc_type]
+    knowledge_text = (knowledge or {}).get("text") or None
+    res = provider.chat([_m(x) for x in calc_draft_messages(rule.title, in_desc, [{"key": k} for k in outputs],
+                                                           knowledge_text)],
                         GenerationOptions(temperature=0.0, json_mode=True, num_predict=400))
     data = _parse_json(res.content) or {}
     outs = data.get("outputs") if isinstance(data.get("outputs"), dict) else {}
-    return {"outputs": outs, "raw": res.content[:4000], "model": res.model, "latency_ms": res.latency_ms}
+    record = {"outputs": outs, "raw": res.content[:4000], "model": res.model, "latency_ms": res.latency_ms}
+    if knowledge_text:  # which VERIFIED knowledge the draft saw (traceability of the retrieval)
+        record["knowledge_context"] = {k: knowledge.get(k) for k in ("formula_ids", "correction_ids", "correction_keys")}  # type: ignore[union-attr]
+    return record
 
 
 def run_calculation(
@@ -183,7 +203,7 @@ def run_calculation(
     draft: dict[str, Any] | None = draft_record
     if draft is None and compare_with_llm and provider is not None and result.status == "ok":
         try:
-            draft = llm_draft(provider, calc_type, inputs)
+            draft = llm_draft(provider, calc_type, inputs, knowledge_for_draft(db, calc_type))
         except ProviderError as exc:
             draft = {"error": exc.code, "message": exc.user_message}
     comparison = compare(result, (draft or {}).get("outputs")) if draft and "outputs" in draft else {
@@ -209,7 +229,25 @@ def run_calculation(
     if calc.mismatch:
         audit.record(db, user.actor, "calculation.llm_mismatch", outcome="info", target_type="calculation",
                      target_id=calc.id, details={"items": [i for i in comparison["items"] if i.get("status") != "match"]})
+        comparison = _self_maintain(db, user, calc, result, comparison, draft)
     return calc, result, comparison
+
+
+def _self_maintain(db: Session, user: AuthenticatedUser, calc: Calculation, result: CalcResult,
+                   comparison: dict[str, Any], draft: dict[str, Any] | None) -> dict[str, Any]:
+    """Mismatch -> diagnosis -> correction -> regression. Never alters the engine result, and a
+    failure here never fails the calculation (the savepoint keeps the calculation row)."""
+    if not get_settings().self_maintenance_enabled:
+        return comparison
+    try:
+        with db.begin_nested():
+            summary = self_maintenance.process_mismatch(db, calc, result, comparison, draft, user.actor)
+    except Exception as exc:  # pragma: no cover - defensive: knowledge upkeep must not break calculations
+        log.exception("Öz-bakım işlenemedi (hesap %s)", calc.id)
+        summary = {"error": type(exc).__name__}
+    comparison = {**comparison, "self_maintenance": summary}
+    calc.comparison = comparison
+    return comparison
 
 
 def format_result_text(result: CalcResult, comparison: dict[str, Any]) -> str:
@@ -237,8 +275,12 @@ def format_result_text(result: CalcResult, comparison: dict[str, Any]) -> str:
     if comparison.get("performed"):
         if comparison.get("mismatch"):
             lines.append("")
-            lines.append("⚠️ Qwen'in taslak hesabı motor sonucuyla UYUŞMADI. Gösterilen değerler doğrulanmış hesap "
-                         "motoruna aittir; uyuşmazlık denetim kaydına işlendi.")
+            lines.append("⚠️ **Hesap motoru doğrulaması: LLM taslağında uyuşmazlık tespit edildi.** Qwen'in taslak "
+                         "hesabı motor sonucuyla UYUŞMADI. Gösterilen değerler doğrulanmış hesap motoruna aittir; "
+                         "uyuşmazlık denetim kaydına işlendi.")
+            sm = comparison.get("self_maintenance") or {}
+            if sm.get("suspected_class"):
+                lines.append(self_maintenance_line(sm))
         else:
             lines.append("")
             lines.append("Qwen taslağı motor sonucuyla tolerans içinde uyumlu.")
@@ -248,6 +290,21 @@ def format_result_text(result: CalcResult, comparison: dict[str, Any]) -> str:
     lines.append("")
     lines.append("Ayrıntılar (girdiler, formüller, birimler, kaynaklar) için 'Ayrıntılı çözüm'ü açın.")
     return "\n".join(lines)
+
+
+def self_maintenance_line(sm: dict[str, Any]) -> str:
+    """One professional line: suspected root cause and the correction's verification state."""
+    cls = sm["suspected_class"]
+    text = f"Olası kök neden: {CLASS_LABEL_TR.get(cls, cls)} ({cls})"
+    fields = ", ".join(sm.get("fields") or [])
+    if fields:
+        text += f"; alanlar: {fields}"
+    state = {"VERIFIED": "doğrulandı", "REJECTED": "reddedildi", "CANDIDATE": "aday (doğrulanamadı)",
+             "TESTING": "test ediliyor"}
+    for c in (sm.get("corrections") or [])[:2]:
+        text += (f". Düzeltme kuralı `{c['key']}`: {state.get(c['status'], c['status'])}"
+                 + (f", {c['cases']} deterministik regresyon vakası" if c.get("cases") else ""))
+    return text + "."
 
 
 def _rhs_for_markdown(equation: str) -> str:

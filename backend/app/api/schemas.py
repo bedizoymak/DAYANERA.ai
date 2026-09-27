@@ -211,6 +211,22 @@ class CalcOut(BaseModel):
     message_id: str | None = None
 
 
+# --- engineering knowledge / self-maintenance -------------------------------
+class CorrectionClaimIn(BaseModel):
+    output: str = Field(max_length=40)
+    expression: str = Field(max_length=400)
+    rule_id: str | None = Field(default=None, max_length=120)
+
+
+class CorrectionProposalIn(BaseModel):
+    calc_type: str = Field(max_length=80)
+    family: str = Field(max_length=80)
+    root_cause: str = Field(max_length=60)
+    claims: list[CorrectionClaimIn] = Field(min_length=1, max_length=20)
+    statement: str = Field(max_length=2000)
+    proposed_by: Literal["person", "llm"] = "person"
+
+
 # --- memory ---------------------------------------------------------------
 class MemoryIn(BaseModel):
     kind: Literal["fact", "preference", "technical_value", "source_link", "relationship", "note"] = "fact"

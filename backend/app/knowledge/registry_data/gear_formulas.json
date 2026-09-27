@@ -515,7 +515,7 @@
           "symbol": "CrossedHelicalGear.__init__",
           "target": "at0",
           "expression": "atan(alpha_n/cos(beta))",
-          "note": "the pressure angle in radians is used in place of its tangent (tan missing); wrong even for β = 0 (arctan 0.349 = 19.27° instead of 20°)",
+          "note": "the pressure angle in radians is used in place of its tangent (tan missing); wrong even for β = 0 (arctan 0.349 = 19.24° instead of 20°)",
           "suspected_error_class": "DEGREE_RADIAN_ERROR",
           "line": 40,
           "fingerprint": "2483142f4192b2d8"

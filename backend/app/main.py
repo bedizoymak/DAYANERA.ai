@@ -34,7 +34,7 @@ from app.inference.base import ChatMessage, GenerationOptions, ProviderError
 from app.inference.registry import get_provider
 from app.ingestion.jobs import JobWorker
 from app.ingestion.watcher import Watcher
-from app.services import audit
+from app.services import audit, self_maintenance
 from app.services.audit import Actor
 from app.services.auth import ensure_schema_ready, seed_initial_admin, seed_reference_data
 from app.services.database_sync import SyncWorker
@@ -43,6 +43,18 @@ log = logging.getLogger("dayanera")
 
 API_PREFIX = "/api/v1"
 UNSAFE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
+
+
+def _reverify_knowledge() -> None:
+    """Re-check correction verdicts reached with another engine version or formula registry
+    (deterministic regression only), so retrieval never serves a stale VERIFIED correction."""
+    try:
+        with session_scope() as db:
+            done = self_maintenance.reverify_stale(db, Actor.system())
+        if done:
+            log.info("Öz-bakım: %d düzeltme yeni motor/kayıt sürümüyle yeniden doğrulandı.", len(done))
+    except Exception:  # pragma: no cover - never block startup on knowledge upkeep
+        log.exception("Öz-bakım yeniden doğrulaması yapılamadı")
 
 
 def _warmup_model() -> None:
@@ -87,6 +99,8 @@ async def lifespan(app: FastAPI):
         if settings.watcher_enabled:
             watcher.start()
         threading.Thread(target=_warmup_model, daemon=True, name="model-warmup").start()
+        if settings.self_maintenance_enabled:
+            threading.Thread(target=_reverify_knowledge, daemon=True, name="knowledge-reverify").start()
     yield
     sync_worker.stop()
     watcher.stop()

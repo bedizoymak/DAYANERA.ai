@@ -503,6 +503,7 @@ def validate(registry: Registry | None = None) -> ValidationReport:
                 if o.agreement == "SUPPORTS":
                     o.agreement, o.detail = "CONFLICT", "reddedilen iddiayı uyguluyor (bağımsız matematiksel kontrol başarısız)"
                     o.counterexample = (v.derivative_check or {}).get("worst_case")
+                    o.max_rel_error = (v.derivative_check or {}).get("max_rel_error", 0.0)
     report = ValidationReport(registry=registry, results=results)
     s = report.summary()
     log.info("knowledge.validation rules=%d verified=%d candidate=%d unverified=%d conflict=%d rejected=%d "

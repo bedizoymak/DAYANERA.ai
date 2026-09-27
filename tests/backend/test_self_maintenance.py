@@ -172,6 +172,19 @@ def test_regression_is_blocked_without_iso_evidence():
     assert any("ISO 21771" in r for r in res.blocked_reason)
 
 
+def test_transverse_module_mismatch_gets_a_verified_correction():
+    """The strict-ISO T8 production case: Qwen drafted m_t = 2.142 for m_n = 2 mm, β = 25°."""
+    r = _run("transverse_module", m_n=2, beta=25)
+    cmp, dg = _diagnose(r, {"m_t": 2.142})
+    assert cmp["mismatch"] and r.output_map()["m_t"] == pytest.approx(2.2068, abs=1e-4)
+    assert dg["primary_class"] == "LLM_ARITHMETIC_ERROR" and dg["families"] == ["transverse_conversion"]
+    [spec] = build_from_diagnosis("transverse_module", dg)
+    res = run_regression(spec, RESOLVER)
+    assert res.status == "passed" and res.cases == 35 and res.groups == {"spur": 5, "helical": 30}
+    _cmp, dg2 = _diagnose(_run("transverse_module", m_n=2, beta=25), {"m_t": 2 * math.cos(math.radians(25))})
+    assert dg2["primary_class"] == "MODULE_CONVERSION_ERROR"
+
+
 def test_tolerance_family_regression_passes():
     r = _run("iso1328_flank_tolerance", m_n=2, d=60, b=20, A=6)
     cmp = compare(r, {"f_pT": r.output_map()["f_pT"] + 3})

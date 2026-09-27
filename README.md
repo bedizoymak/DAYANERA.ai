@@ -28,6 +28,7 @@ FastAPI "DAYANERA Core API" (http://127.0.0.1:8000/api/v1, OpenAPI JSON at /api/
    ├─ services          chat orchestration · intent · retrieval (PostgreSQL FTS) · grounding · memory
    │                    notes · audit · access (roles/scopes) · system status · calculations
    ├─ calc              deterministic engine (no LLM dependency) + evidence catalog + ISO 286 table parser
+   ├─ knowledge         formula registry + provenance · authority validation · mismatch diagnosis · regression
    ├─ ingestion         watcher · DB job queue · PDF/Office/text/image/audio/video/archive extractors
    │                    local OCR (RapidOCR/ONNX) · local speech-to-text (faster-whisper) · versioned raw storage
    ├─ inference         LocalOllamaProvider (localhost only) · OpenAIProvider/ClaudeProvider (disabled)
@@ -182,6 +183,40 @@ If a required passage is missing, deleted, superseded or unindexed, the engine r
 Draft OCR inputs, invalid units and unsupported formulas are also rejected.
 The chat UI shows a concise result. Use **Ayrıntılı çözüm** to see inputs and provenance, formulas, units, source pages,
 the step trace and the Qwen comparison.
+
+## Engineering knowledge and self-maintenance
+
+The calculation engine stays the numerical authority. Qwen is **not** fine-tuned and never receives repository code.
+When a Qwen draft disagrees with the engine, DAYANERA turns the mismatch into verified knowledge instead of a dead log.
+
+```text
+ISO evidence (calc/evidence.py) + reference implementations (static scan)
+   → formula registry (backend/app/knowledge/registry_data/gear_formulas.json)
+   → authority validation (statuses computed: VERIFIED / CANDIDATE / UNVERIFIED / CONFLICT / REJECTED)
+Qwen draft → engine → comparator → mismatch event → deterministic diagnosis (root-cause class)
+   → correction candidate (formula family : root cause) → regression matrix → VERIFIED | REJECTED
+   → VERIFIED corrections and formulas retrieved into later Qwen drafts
+```
+
+- **VERIFIED** requires a DAYANERA ISO evidence requirement **and** numerical agreement of the engine over a validation
+  matrix. External code can support a rule but never verify it. Where external code disagrees with the ISO-backed
+  engine, the engine is not changed: the disagreement is kept as a conflict record (`/api/v1/knowledge/conflicts`).
+- Only the deterministic regression promotes a correction (`CANDIDATE → TESTING → VERIFIED`); a failing one becomes
+  `REJECTED`. A missing ISO passage blocks the verification. Verdicts are re-checked when the engine version or the registry changes.
+- Only VERIFIED corrections enter Qwen prompts. `KNOWLEDGE_CONTEXT_MODE=targeted` (default) adds only the formula families
+  that already have a VERIFIED correction. `all` adds every VERIFIED formula, and `off` adds nothing.
+- On a mismatch, the chat reply shows *"Hesap motoru doğrulaması: LLM taslağında uyuşmazlık tespit edildi."* with the engine
+  values, the suspected root cause and the correction state. **Ayrıntılı çözüm** shows the diagnosis.
+- "Where did this formula come from?": `GET /api/v1/knowledge/formulas/{id}` returns the ISO passage (resolved live in
+  the active corpus), the engine function and line, supporting and conflicting implementations (commit permalinks, licences) and the tests.
+- Mismatch events store numeric canonical inputs only, never message text. Both tables are local-only for Supabase sync.
+- Commands (from `backend\`):
+  - `python -m app.cli knowledge-validate --out ../docs/knowledge/formula_registry_validation.json` writes the validation snapshot.
+  - `python -m app.cli knowledge-scan --repos <folder outside the repo> --out ../docs/knowledge/reference_scan_manifest.json`
+    scans reference clones statically (ast only, nothing executed).
+  - `python -m app.cli knowledge-reverify` re-checks corrections after an engine or registry change.
+
+Details: [docs/SELF_MAINTENANCE_ENGINEERING_REPORT.md](docs/SELF_MAINTENANCE_ENGINEERING_REPORT.md).
 
 ## Memory, notes and audit
 

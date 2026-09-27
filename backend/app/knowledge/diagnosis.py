@@ -258,7 +258,7 @@ def diagnose(calc_type: str, canonical_inputs: dict[str, float], outputs: list[d
     """
     registry = get_registry()
     inp = resolved_inputs(calc_type, canonical_inputs) if calc_type in RULES else dict(canonical_inputs)
-    if calc_type == "cylindrical_gear_geometry":
+    if calc_type in ("cylindrical_gear_geometry", "transverse_module"):
         v = _cyl_vars(inp)
         hyps: Callable[[str], list[Hyp]] = _hyps_cylindrical
     elif calc_type == "gear_pair":

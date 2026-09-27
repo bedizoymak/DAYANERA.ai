@@ -3350,6 +3350,474 @@
           }
         }
       }
+    },
+    "/api/v1/knowledge/summary": {
+      "get": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Bilgi kaydı ve öz-bakım sayıları",
+        "operationId": "summary_api_v1_knowledge_summary_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Summary Api V1 Knowledge Summary Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/knowledge/formulas": {
+      "get": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Formül kaydı (durum hesaplanır, beyan edilmez)",
+        "operationId": "formulas_api_v1_knowledge_formulas_get",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^(VERIFIED|CANDIDATE|UNVERIFIED|CONFLICT|REJECTED)$"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "family",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Family"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": true
+                  },
+                  "title": "Response Formulas Api V1 Knowledge Formulas Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/knowledge/formulas/{rule_id}": {
+      "get": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Bu formül nereden geldi? (ISO pasajı, motor, dış uygulamalar, testler)",
+        "operationId": "formula_api_v1_knowledge_formulas__rule_id__get",
+        "parameters": [
+          {
+            "name": "rule_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Rule Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Formula Api V1 Knowledge Formulas  Rule Id  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/knowledge/conflicts": {
+      "get": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Yetkili tanımla çelişen dış uygulamalar",
+        "operationId": "conflicts_api_v1_knowledge_conflicts_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "type": "array",
+                  "title": "Response Conflicts Api V1 Knowledge Conflicts Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/knowledge/references": {
+      "get": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "İncelenen referans depoları (lisans, commit, sınıflandırma)",
+        "operationId": "references_api_v1_knowledge_references_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "type": "array",
+                  "title": "Response References Api V1 Knowledge References Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/knowledge/corrections": {
+      "get": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Düzeltme hafızası (üye: yalnızca VERIFIED)",
+        "operationId": "corrections_api_v1_knowledge_corrections_get",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^(CANDIDATE|TESTING|VERIFIED|REJECTED)$"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": true
+                  },
+                  "title": "Response Corrections Api V1 Knowledge Corrections Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Düzeltme önerisi (kişi/LLM); yalnızca regresyon terfi ettirir",
+        "operationId": "propose_api_v1_knowledge_corrections_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CorrectionProposalIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Propose Api V1 Knowledge Corrections Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/knowledge/corrections/{correction_id}": {
+      "get": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Düzeltme ayrıntısı ve regresyon sonucu",
+        "operationId": "correction_api_v1_knowledge_corrections__correction_id__get",
+        "parameters": [
+          {
+            "name": "correction_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Correction Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Correction Api V1 Knowledge Corrections  Correction Id  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/knowledge/corrections/{correction_id}/verify": {
+      "post": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Deterministik regresyonu yeniden çalıştır (yalnızca sahip)",
+        "operationId": "verify_api_v1_knowledge_corrections__correction_id__verify_post",
+        "parameters": [
+          {
+            "name": "correction_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Correction Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Verify Api V1 Knowledge Corrections  Correction Id  Verify Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/knowledge/mismatches": {
+      "get": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Yapılandırılmış LLM-motor uyuşmazlık olayları (yalnızca sahip)",
+        "operationId": "mismatches_api_v1_knowledge_mismatches_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 500,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": true
+                  },
+                  "title": "Response Mismatches Api V1 Knowledge Mismatches Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/knowledge/mismatches/{event_id}": {
+      "get": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Uyuşmazlık olayı ayrıntısı (yalnızca sahip)",
+        "operationId": "mismatch_api_v1_knowledge_mismatches__event_id__get",
+        "parameters": [
+          {
+            "name": "event_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Event Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Mismatch Api V1 Knowledge Mismatches  Event Id  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -3825,6 +4293,89 @@
         },
         "type": "object",
         "title": "CorpusNoteIn"
+      },
+      "CorrectionClaimIn": {
+        "properties": {
+          "output": {
+            "type": "string",
+            "maxLength": 40,
+            "title": "Output"
+          },
+          "expression": {
+            "type": "string",
+            "maxLength": 400,
+            "title": "Expression"
+          },
+          "rule_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rule Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "output",
+          "expression"
+        ],
+        "title": "CorrectionClaimIn"
+      },
+      "CorrectionProposalIn": {
+        "properties": {
+          "calc_type": {
+            "type": "string",
+            "maxLength": 80,
+            "title": "Calc Type"
+          },
+          "family": {
+            "type": "string",
+            "maxLength": 80,
+            "title": "Family"
+          },
+          "root_cause": {
+            "type": "string",
+            "maxLength": 60,
+            "title": "Root Cause"
+          },
+          "claims": {
+            "items": {
+              "$ref": "#/components/schemas/CorrectionClaimIn"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Claims"
+          },
+          "statement": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Statement"
+          },
+          "proposed_by": {
+            "type": "string",
+            "enum": [
+              "person",
+              "llm"
+            ],
+            "title": "Proposed By",
+            "default": "person"
+          }
+        },
+        "type": "object",
+        "required": [
+          "calc_type",
+          "family",
+          "root_cause",
+          "claims",
+          "statement"
+        ],
+        "title": "CorrectionProposalIn"
       },
       "DeleteIn": {
         "properties": {

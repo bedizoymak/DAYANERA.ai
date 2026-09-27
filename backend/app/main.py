@@ -19,6 +19,7 @@ from app.api.routes import (
     conversations,
     documents,
     extractions,
+    knowledge,
     memory,
     notes,
     retrieval,
@@ -137,7 +138,8 @@ def create_app() -> FastAPI:
                             status_code=503)
 
     for r in (system.router, auth.router, conversations.router, documents.router, extractions.router,
-              calculations.router, memory.router, audit_log.router, users.router, notes.router, retrieval.router):
+              calculations.router, memory.router, audit_log.router, users.router, notes.router, retrieval.router,
+              knowledge.router):
         app.include_router(r, prefix=API_PREFIX)
     return app
 

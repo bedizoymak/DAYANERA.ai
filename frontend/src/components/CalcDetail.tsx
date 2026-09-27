@@ -1,4 +1,4 @@
-import type { Calculation } from '../api/types';
+import type { Calculation, SelfMaintenanceSummary } from '../api/types';
 import MathMarkdown from './MathMarkdown';
 
 function fmt(v: unknown): string {
@@ -145,7 +145,7 @@ export default function CalcDetail({ calc }: { calc: Calculation }) {
             <>
               <p className={cmp.mismatch ? 'error' : 'ok'}>
                 {cmp.mismatch
-                  ? 'Uyuşmazlık: gösterilen değerler hesap motorunundur; denetim kaydı oluşturuldu.'
+                  ? 'Hesap motoru doğrulaması: LLM taslağında uyuşmazlık tespit edildi. Uyuşmazlık: gösterilen değerler hesap motorunundur; denetim kaydı oluşturuldu.'
                   : 'Qwen taslağı tolerans içinde uyumlu.'}
               </p>
               <table className="table compact">
@@ -158,10 +158,42 @@ export default function CalcDetail({ calc }: { calc: Calculation }) {
                   ))}
                 </tbody>
               </table>
+              {cmp.self_maintenance?.suspected_class && <SelfMaintenance sm={cmp.self_maintenance} />}
             </>
           )}
         </>
       )}
+    </div>
+  );
+}
+
+const STATUS_TEXT: Record<string, string> = {
+  VERIFIED: 'doğrulandı', REJECTED: 'reddedildi', CANDIDATE: 'aday', TESTING: 'test ediliyor',
+};
+
+/** Mismatch diagnosis and the correction rule it produced (deterministic; Qwen never self-certifies). */
+function SelfMaintenance({ sm }: { sm: SelfMaintenanceSummary }) {
+  return (
+    <div className="self-maintenance" data-testid="self-maintenance">
+      <h5>Öz-bakım: kök neden ve düzeltme</h5>
+      <p>
+        Olası kök neden: <strong>{sm.suspected_class}</strong>
+        {sm.fields?.length ? <> · alanlar: {sm.fields.join(', ')}</> : null}
+        {sm.draft_internally_consistent === false && <> · taslak kendi içinde tutarsız</>}
+      </p>
+      {sm.formula_ids?.length ? <p className="small">Formül kayıtları: <code>{sm.formula_ids.join(', ')}</code></p> : null}
+      <ul className="small">
+        {sm.corrections?.map((c) => (
+          <li key={c.id}>
+            <code>{c.key}</code>:{' '}
+            <span className={`chip ${c.status === 'VERIFIED' ? 'chip-ok' : c.status === 'REJECTED' ? 'chip-bad' : 'chip-warn'}`}>
+              {STATUS_TEXT[c.status] ?? c.status}
+            </span>
+            {c.cases > 0 && <> · {c.cases} regresyon vakası, {c.checks} kontrol</>}
+          </li>
+        ))}
+      </ul>
+      <p className="small muted">Sınıf ve doğrulama deterministiktir; LLM kendi düzeltmesini onaylayamaz.</p>
     </div>
   );
 }

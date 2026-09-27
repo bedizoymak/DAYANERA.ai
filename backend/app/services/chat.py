@@ -49,6 +49,7 @@ from app.services.calculations import (
     DbEvidenceResolver,
     InputSpecIn,
     format_result_text,
+    knowledge_for_draft,
     llm_draft,
     llm_map_request,
     resolve_inputs,
@@ -338,11 +339,14 @@ class ChatService:
             inputs = resolve_inputs(db, scopes, {k: InputSpecIn(value=v, unit=u) for k, (v, u) in raw_inputs.items()},
                                     user_msg_id)
             pre = CalculationEngine(DbEvidenceResolver(db, scopes)).run(CalcRequest(calc_type, inputs))
+            # VERIFIED formulas / corrections learned from earlier mismatches (never candidates)
+            knowledge = knowledge_for_draft(db, calc_type) if pre.status == "ok" and self.settings.calc_llm_compare \
+                else None
         draft_record = None
         if pre.status == "ok" and self.settings.calc_llm_compare:
             yield {"event": "status", "data": {"stage": "llm_draft", "text": "Qwen taslak hesabı hazırlanıyor…"}}
             try:
-                draft_record = llm_draft(self.provider, calc_type, inputs)
+                draft_record = llm_draft(self.provider, calc_type, inputs, knowledge)
             except ProviderError as exc:
                 draft_record = {"error": exc.code, "message": exc.user_message}
         yield {"event": "status", "data": {"stage": "engine", "text": "Deterministik hesap motoru doğruluyor…"}}
@@ -364,6 +368,8 @@ class ChatService:
             metadata = {"calculation_id": str(calc.id), "calc_type": calc_type, "calc_status": result.status,
                         "mismatch": calc.mismatch, "detail_open": intent.wants_detail, "mapping": mapping,
                         "intent_subtype": intent.subtype}
+            if comparison.get("self_maintenance"):
+                metadata["self_maintenance"] = comparison["self_maintenance"]
             if result.status == "refused":
                 refusal = self._refusal_meta(user, intent.question, "calculation_refused",
                                              active_corpus_codes(db, scopes))

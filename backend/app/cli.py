@@ -11,6 +11,9 @@ Commands:
   corpus-approve   --code "ISO 53" --by <owner_admin> [--note ...]   approve for the verified corpus
   corpus-revoke    --code ... --by ... --note ...                     take out of the verified corpus
   corpus-reject    --code ... --by ... --note ...                     mark the extraction as failed
+  knowledge-validate   authority validation of the formula registry (exit 1 on an engine CONFLICT)
+  knowledge-scan       --repos DIR [--out FILE] [--update-registry]   static reference-repository scan
+  knowledge-reverify   re-run the regression of corrections verified with another engine/registry
 """
 from __future__ import annotations
 
@@ -166,10 +169,14 @@ def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="app.cli")
     p.add_argument("command", choices=["check-config", "migrate", "seed", "serve", "reindex", "export-openapi",
                                        "sync-init", "sync-once", "sync-status", "corpus-status", "corpus-approve",
-                                       "corpus-revoke", "corpus-reject"])
+                                       "corpus-revoke", "corpus-reject", "knowledge-validate", "knowledge-scan",
+                                       "knowledge-reverify"])
     p.add_argument("--code", help="standart kodu (ör. 'ISO 53', 'ISO 286-1:2010')")
     p.add_argument("--by", help="onaylayan owner_admin kullanıcı adı")
     p.add_argument("--note", help="inceleme notu / gerekçe")
+    p.add_argument("--repos", help="referans depoların klonlandığı klasör (DAYANERA dışında)")
+    p.add_argument("--out", help="tarama manifestosunun yazılacağı dosya")
+    p.add_argument("--update-registry", action="store_true", help="satır/parmak izi bilgisini kayda yaz")
     args = p.parse_args(argv)
     try:
         return {
@@ -180,10 +187,62 @@ def main(argv: list[str] | None = None) -> int:
             "corpus-approve": lambda: cmd_corpus_action("approve", args.code, args.by, args.note),
             "corpus-revoke": lambda: cmd_corpus_action("revoke", args.code, args.by, args.note),
             "corpus-reject": lambda: cmd_corpus_action("reject", args.code, args.by, args.note),
+            "knowledge-validate": cmd_knowledge_validate,
+            "knowledge-scan": lambda: cmd_knowledge_scan(args.repos, args.out, args.update_registry),
+            "knowledge-reverify": cmd_knowledge_reverify,
         }[args.command]()
     except ConfigError as exc:
         print(f"YAPILANDIRMA HATASI: {exc}", file=sys.stderr)
         return 2
+
+
+def cmd_knowledge_validate() -> int:
+    """Authority validation of the registry; prints counts and conflict records (no DB needed)."""
+    from app.knowledge.validation import validate
+
+    report = validate()
+    summary = report.summary()
+    print(json.dumps({"summary": summary, "conflicts": [
+        {k: c[k] for k in ("id", "rule_id", "repo", "file", "line", "commit", "max_rel_error", "suspected_error_class")}
+        for c in report.conflicts()]}, ensure_ascii=False, indent=2))
+    return 1 if summary["by_status"]["CONFLICT"] else 0
+
+
+def cmd_knowledge_scan(repos: str | None, out: str | None, update: bool) -> int:
+    """Static scan of reference repositories cloned OUTSIDE the DAYANERA tree (nothing is executed)."""
+    from pathlib import Path
+
+    from app.knowledge.scanner import scan, update_registry_anchors
+
+    if not repos:
+        print("--repos gerekli (ör. /tmp/dayanera-reference-repos)", file=sys.stderr)
+        return 2
+    root = Path(repos).resolve()
+    if REPO_ROOT.resolve() in (root, *root.parents):
+        print("Referans depolar DAYANERA çalışma ağacının dışında olmalı.", file=sys.stderr)
+        return 2
+    result = scan(root)
+    if update:
+        result["registry_anchors_updated"] = update_registry_anchors(result)
+    text = json.dumps(result, ensure_ascii=False, indent=2)
+    if out:
+        Path(out).write_text(text + "\n", encoding="utf-8")
+    else:
+        print(text)
+    bad = [a for a in result["anchors"] if a["state"] in ("changed", "missing")]
+    return 1 if bad else 0
+
+
+def cmd_knowledge_reverify() -> int:
+    from app.db.session import init_engine, session_scope
+    from app.services import self_maintenance
+    from app.services.audit import Actor
+
+    init_engine(get_settings().database_url)
+    with session_scope() as db:
+        done = self_maintenance.reverify_stale(db, Actor.system())
+    print(json.dumps({"reverified": done}, ensure_ascii=False))
+    return 0
 
 
 def cmd_sync(action: str) -> int:

@@ -1,4 +1,5 @@
-"""ORM models mirroring database/migrations/sql/0001_initial.sql and 0002_canonical_ingestion.sql.
+"""ORM models mirroring database/migrations/sql/0001_initial.sql, 0002_canonical_ingestion.sql and
+0003_self_maintenance.sql.
 
 The SQL migration is authoritative; these mappings intentionally omit the
 generated ``tsv`` columns (full-text queries use explicit parameterized SQL).
@@ -341,6 +342,68 @@ class Calculation(Base):
     comparison: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
     mismatch: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = _ts()
+
+
+class EngineeringCorrection(Base):
+    """Correction memory (0003): a general rule keyed by formula family and root cause."""
+
+    __tablename__ = "engineering_corrections"
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    correction_key: Mapped[str] = mapped_column(Text, unique=True)
+    family: Mapped[str] = mapped_column(Text)
+    root_cause: Mapped[str] = mapped_column(Text)
+    calc_type: Mapped[str] = mapped_column(Text)
+    output_keys: Mapped[list[str]] = mapped_column(JSONB, default=list)
+    formula_ids: Mapped[list[str]] = mapped_column(JSONB, default=list)
+    title: Mapped[str] = mapped_column(Text)
+    statement: Mapped[str] = mapped_column(Text)
+    claims: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, default=list)
+    invariants: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, default=list)
+    reference_values: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, default=list)
+    source: Mapped[str] = mapped_column(Text)
+    proposed_by: Mapped[str] = mapped_column(Text, default="system")
+    status: Mapped[str] = mapped_column(Text, default="CANDIDATE")
+    regression_status: Mapped[str] = mapped_column(Text, default="not_run")
+    regression_result: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
+    engine_version: Mapped[str | None] = mapped_column(Text, nullable=True)
+    registry_fingerprint: Mapped[str | None] = mapped_column(Text, nullable=True)
+    occurrences: Mapped[int] = mapped_column(Integer, default=0)
+    last_seen_at: Mapped[datetime | None] = _ts(nullable=True, default=False)
+    verified_at: Mapped[datetime | None] = _ts(nullable=True, default=False)
+    rejected_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = _ts()
+    updated_at: Mapped[datetime] = _ts()
+
+
+class CalcMismatchEvent(Base):
+    """Structured LLM-draft vs engine mismatch (0003). Numeric inputs only, no message text."""
+
+    __tablename__ = "calc_mismatch_events"
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    calculation_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("calculations.id", ondelete="SET NULL"), nullable=True
+    )
+    created_at: Mapped[datetime] = _ts()
+    calc_type: Mapped[str] = mapped_column(Text)
+    engine_version: Mapped[str] = mapped_column(Text)
+    model: Mapped[str | None] = mapped_column(Text, nullable=True)
+    normalized_inputs: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
+    assumptions: Mapped[list[str]] = mapped_column(JSONB, default=list)
+    llm_values: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
+    engine_values: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
+    fields: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, default=list)
+    mismatching_fields: Mapped[list[str]] = mapped_column(JSONB, default=list)
+    formula_ids: Mapped[list[str]] = mapped_column(JSONB, default=list)
+    authority_sources: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, default=list)
+    supporting_evidence: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, default=list)
+    suspected_class: Mapped[str] = mapped_column(Text)
+    llm_suggested_class: Mapped[str | None] = mapped_column(Text, nullable=True)
+    diagnosis: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
+    correction_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("engineering_corrections.id"), nullable=True
+    )
+    regression_status: Mapped[str | None] = mapped_column(Text, nullable=True)
+    disposition: Mapped[str] = mapped_column(Text, default="open")
 
 
 class MemoryItem(Base):

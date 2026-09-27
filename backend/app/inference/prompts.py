@@ -113,13 +113,15 @@ def calc_mapping_messages(user_text: str, rule_infos: list[dict]) -> list[dict]:
     return [{"role": "system", "content": system}, {"role": "user", "content": user_text}]
 
 
-def calc_draft_messages(calc_title: str, inputs: dict, output_keys: list[dict]) -> list[dict]:
+def calc_draft_messages(calc_title: str, inputs: dict, output_keys: list[dict], knowledge: str | None = None) -> list[dict]:
     system = (
         "Bir dişli mühendisi olarak aşağıdaki hesabı kendi bilgine göre TASLAK olarak yap. SADECE JSON döndür: "
         "{\"outputs\": {anahtar: sayı}}. Birimler: uzunluk mm, açı derece, tolerans µm. Açıklama yazma."
     )
     user = (f"Hesap: {calc_title}\nGirdiler: {json.dumps(inputs, ensure_ascii=False)}\n"
             f"Hesaplanacak çıktılar: {json.dumps(output_keys, ensure_ascii=False)}")
+    if knowledge:  # VERIFIED formulas / corrections only (self-maintenance retrieval), never raw repository code
+        user += f"\n\n{knowledge}"
     return [{"role": "system", "content": system}, {"role": "user", "content": user}]
 
 

@@ -31,7 +31,8 @@ TABLES = (
     "extracted_values", "conversations", "messages", "message_attachments",
     "message_sources", "calculations", "memory_items", "recommendation_notes",
 )
-LOCAL_ONLY = ("auth_sessions", "ingestion_jobs", "system_state", "audit_events")
+LOCAL_ONLY = ("auth_sessions", "ingestion_jobs", "system_state", "audit_events", "calc_mismatch_events",
+              "engineering_corrections")
 MAX_ROWS = 100_000
 MAX_BYTES = 64 * 1024 * 1024
 LOCK_ID = 731_946_202

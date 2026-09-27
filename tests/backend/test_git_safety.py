@@ -17,7 +17,11 @@ MUST_IGNORE = [".env", ".env.production", "data/documents/x.pdf", "data/document
                "frontend/node_modules/react/index.js", "frontend/dist/index.html", "coverage/lcov.info",
                "iso booklets/ISO 53.pdf", "data/backups/dump.sql", "repositories/x/README.md"]
 MUST_TRACK = [".env.example", "README.md", "docker-compose.yml", "backend/requirements.lock.txt",
-              "frontend/package-lock.json", "database/migrations/sql/0001_initial.sql", "scripts/start-local.ps1"]
+              "frontend/package-lock.json", "database/migrations/sql/0001_initial.sql", "scripts/start-local.ps1",
+              # the formula registry is source, not runtime data: it must never land in an ignored data/ folder
+              "backend/app/knowledge/registry_data/gear_formulas.json",
+              "backend/app/knowledge/registry_data/reference_repositories.json",
+              "database/migrations/sql/0003_self_maintenance.sql"]
 
 
 def _ignored(path: str) -> bool:

@@ -212,6 +212,20 @@ export interface CalcResult {
   trace_latex?: string[];
 }
 
+export interface SelfMaintenanceSummary {
+  event_id?: string;
+  suspected_class?: string;
+  fields?: string[];
+  draft_internally_consistent?: boolean | null;
+  formula_ids?: string[];
+  disposition?: string;
+  corrections?: Array<{
+    id: string; key: string; family: string; root_cause: string; calc_type: string; status: string;
+    regression_status: string; cases: number; checks: number; occurrences: number; stale: boolean;
+  }>;
+  error?: string;
+}
+
 export interface Calculation {
   id: string;
   calc_type: string;
@@ -225,6 +239,7 @@ export interface Calculation {
     mismatch?: boolean;
     reason?: string;
     items?: Array<{ key: string; engine: number; llm: number | null; status: string; abs_diff?: number; tolerance?: number }>;
+    self_maintenance?: SelfMaintenanceSummary;
   } | null;
   mismatch: boolean;
   created_at: string;

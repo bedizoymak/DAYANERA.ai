@@ -62,6 +62,16 @@ export default function SystemPage() {
           <p className="small">İşçi: {s.worker.running ? 'çalışıyor' : 'durdu'} · başlangıçtan beri {s.worker.processed_since_start} iş</p>
           {c.failed?.length > 0 && <ul className="error small">{c.failed.map((f: any) => <li key={f.title}>{f.title}: {f.error}</li>)}</ul>}
         </section>
+        {s.self_maintenance && (
+          <section className="card" data-testid="knowledge-card">
+            <h2>Mühendislik bilgisi / öz-bakım</h2>
+            <p>Formül kaydı: {s.self_maintenance.registry.rules} kural · {Object.entries(s.self_maintenance.registry.by_status).map(([k, v]) => `${k} ${v}`).join(' · ')}</p>
+            <p className="small">Dış uygulama çelişkisi: {s.self_maintenance.registry.conflict_records} · motorla karşılaştırılan vaka: {s.self_maintenance.registry.engine_checked_cases}</p>
+            <p className="small">Uyuşmazlık olayı: {s.self_maintenance.mismatch_events}{Object.keys(s.self_maintenance.mismatch_classes ?? {}).length > 0 && ` (${Object.entries(s.self_maintenance.mismatch_classes).map(([k, v]) => `${k} ${v}`).join(', ')})`}</p>
+            <p className="small">Düzeltmeler: {Object.entries(s.self_maintenance.corrections).map(([k, v]) => `${k} ${v}`).join(' · ')}</p>
+            <p className="small muted">Motor {s.self_maintenance.engine_version} · kayıt {s.self_maintenance.registry_fingerprint}</p>
+          </section>
+        )}
         <section className="card">
           <h2>Yerel yetenekler</h2>
           <p>OCR (RapidOCR/ONNX): {s.capabilities.ocr ? 'açık' : 'kapalı'}</p>

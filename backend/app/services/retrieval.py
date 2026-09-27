@@ -12,8 +12,12 @@ Stages (Haystack-style joiner, implemented natively on PostgreSQL):
   3. lexical channel: tsvector + GIN (english + simple), heading-weighted
   4. metadata filters: verified corpus, lifecycle, scope, requested standard
   5. reciprocal rank fusion of the channels
-  6. deterministic rerank: term coverage, exact-token and metadata boosts
-A dense (vector) channel is deliberately absent: see docs/RAG_INGESTION.md.
+  6. deterministic rerank: term coverage, exact-token and metadata boosts, the chunk kind the
+     question asks for (formula / table row / definition) and the quantity a formula defines
+  7. parent-context expansion (``build_context``): a formula or table-row child is sent to the
+     model with its heading path, variable meanings, LaTeX and, budget permitting, its parent window
+Engineering chunks (0004): parent rows are context windows and are never searched directly.
+A dense (vector) channel is deliberately absent: see docs/ENGINEERING_DOCUMENT_CHUNKING_GUIDE.md.
 """
 from __future__ import annotations
 
@@ -47,9 +51,10 @@ _GREEK_NAME_OF = {g: n for n, g in GREEK_NAMES.items() if n != "alfa"}
 _STOP_CODES = {"ISO", "DIN", "EN", "BS", "TR", "TS", "IEC", "PDF", "SI"}
 _SYMBOL_TOKEN = re.compile(r"(?<![^\W_])[^\W_]{1,7}(?![^\W_])", re.UNICODE)
 _LABEL_WORDS = {"class": "class", "sınıf": "class", "test": "test", "type": "type", "tip": "type", "grade": "grade",
-                "table": "table", "tablo": "table", "figure": "figure", "şekil": "figure", "annex": "annex", "ek": "annex"}
-_LABEL = re.compile(r"(?<!\w)(?i:(class|sınıf|test|type|tip|grade|table|tablo|figure|şekil|annex|ek))\s+"
-                    r"([A-Z0-9][A-Za-z0-9]{0,3})(?![\w])", re.UNICODE)
+                "table": "table", "tablo": "table", "figure": "figure", "şekil": "figure", "annex": "annex", "ek": "annex",
+                "deviation": "deviation", "deviations": "deviation", "sapma": "deviation", "sapması": "deviation"}
+_LABEL = re.compile(r"(?<!\w)(?i:(class|sınıf|test|type|tip|grade|table|tablo|figure|şekil|annex|ek|deviations?|"
+                    r"sapması|sapma))\s+([A-Z0-9][A-Za-z0-9]{0,3})(?![\w])", re.UNICODE)
 _TR_SUFFIXES = sorted({"lerinin", "larının", "lerini", "larını", "lerin", "ların", "leri", "ları", "lere", "lara",
                        "ler", "lar", "nin", "nın", "ini", "ını", "in", "ın", "i", "ı", "e", "a", "de", "da", "yi",
                        "ye", "ya", "si", "sı"}, key=len, reverse=True)
@@ -165,6 +170,18 @@ class Passage:
     channels: dict = field(default_factory=dict)  # channel -> 1-based rank
     fused: float = 0.0  # reciprocal-rank-fusion score
     boosts: dict = field(default_factory=dict)
+    prompt_text: str = ""  # what the model reads: source text + variable meanings + LaTeX + parent context
+    # engineering chunks (0004)
+    role: str = "leaf"
+    parent_id: uuid.UUID | None = None
+    heading_path: list[str] = field(default_factory=list)
+    context: str = ""
+    equation_numbers: list[str] = field(default_factory=list)
+    symbols: list[str] = field(default_factory=list)
+    formulas: list[dict] = field(default_factory=list)
+    page_start: int | None = None
+    page_end: int | None = None
+    validation_status: str = "ok"
 
     def focus(self, plan: "QueryPlan", size: int = 800) -> None:
         s, e = focus_window(self.text, plan, size)
@@ -425,7 +442,11 @@ ELIGIBLE_VERSION_SQL = """ka.is_verified_corpus = true
   AND v.corpus_status = 'verified'"""
 
 _COLUMNS = """c.id, c.document_id, c.version_id, v.version_number, d.title, d.standard_code, c.page_number,
-       c.locator, c.text, c.confidence_status, c.clause, c.heading, c.content_type"""
+       c.locator, c.text, c.confidence_status, c.clause, c.heading, c.content_type, c.chunk_role, c.parent_id,
+       c.heading_path, c.context, c.equation_numbers, c.symbols, c.formula, c.page_start, c.page_end,
+       c.validation_status"""
+# parents are context windows over their children: never a search hit of their own
+_SEARCHABLE = "c.chunk_role <> 'parent'"
 
 _SEARCH_SQL = """
 SELECT {columns},
@@ -436,6 +457,7 @@ JOIN documents d ON d.id = c.document_id
 JOIN knowledge_areas ka ON ka.id = d.knowledge_area_id,
      (SELECT {query_expr} AS query) q
 WHERE c.tsv @@ q.query
+  AND {searchable}
   AND {eligible}
   AND c.confidence_status IN ('verified_source', 'user_confirmed')
   AND {scope}
@@ -456,6 +478,7 @@ JOIN document_versions v ON v.id = c.version_id
 JOIN documents d ON d.id = c.document_id
 JOIN knowledge_areas ka ON ka.id = d.knowledge_area_id
 WHERE ({exact_match} c.clause = ANY(CAST(:clauses AS text[])) OR {eq_cond})
+  AND {searchable}
   AND {eligible}
   AND c.confidence_status IN ('verified_source', 'user_confirmed')
   AND {scope}
@@ -470,7 +493,7 @@ FROM document_chunks c
 JOIN document_versions v ON v.id = c.version_id
 JOIN documents d ON d.id = c.document_id
 JOIN knowledge_areas ka ON ka.id = d.knowledge_area_id
-WHERE c.document_id = ANY(CAST(:docs AS uuid[])) AND c.content_type = 'table'
+WHERE c.document_id = ANY(CAST(:docs AS uuid[])) AND c.content_type IN ('table', 'table_row_group')
   AND {eligible}
   AND c.confidence_status IN ('verified_source', 'user_confirmed')
 """
@@ -525,6 +548,14 @@ def lexical_boost(plan: QueryPlan, passage_text: str) -> float:
 def _exact_terms(plan: QueryPlan) -> str:
     terms = [re.sub(r"[^\w.]", "", v.lower()) for s in plan.symbols for v in symbol_variants(s)]
     terms += [c.lower() for c in plan.clauses if not c.startswith("Annex")]
+    # labelled identifiers as adjacent-word phrases: "deviation H" -> deviation <-> h (ISO 286-2 Table 6
+    # among thirty "Limit deviations for holes" tables), "Class FD" -> class <-> fd
+    for lab in plan.labels:
+        kw, code = lab.split(" ", 1)
+        code = re.sub(r"[^\w]", "", code.lower())
+        words = [w for w, en in _LABEL_WORDS.items() if en == kw and re.fullmatch(r"[a-z]+", w)]
+        if code:
+            terms += [f"{w} <-> {code}" for w in words]
     return " | ".join(dict.fromkeys(t for t in terms if t and not t.endswith(".")))
 
 
@@ -540,12 +571,27 @@ def structural_matches(plan: QueryPlan, content_type: str) -> list[str]:
     return [alts[0] for alts in plan.concepts if set(a.lower() for a in alts) <= kinds]
 
 
+_GLOSSARY_SQL = """
+SELECT d.id AS document_id, v.metadata -> 'symbol_glossary' AS glossary
+FROM documents d
+JOIN document_versions v ON v.id = d.current_version_id
+JOIN knowledge_areas ka ON ka.id = d.knowledge_area_id
+WHERE d.id = ANY(CAST(:docs AS uuid[])) AND {eligible}
+"""
+
+
 def symbol_definitions(db: Session, plan: QueryPlan, doc_ids: set) -> dict:
-    """{document_id: {symbol: description}} from the verified symbol tables of those documents."""
+    """{document_id: {symbol: description}} from the verified symbol tables of those documents
+    (the symbol glossary stored at ingestion, else the symbol-table chunks)."""
     wanted = {v for s in plan.symbols for v in symbol_variants(s)}
     out: dict = {}
     if not wanted or not doc_ids:
         return out
+    for doc_id, glossary in db.execute(text(_GLOSSARY_SQL.format(eligible=ELIGIBLE_VERSION_SQL)),
+                                       {"docs": list(doc_ids)}).all():
+        for sym, info in (glossary or {}).items():
+            if sym in wanted and (info or {}).get("description"):
+                out.setdefault(doc_id, {})[sym] = info["description"]
     rows = db.execute(text(_DEFINITION_SQL.format(eligible=ELIGIBLE_VERSION_SQL)), {"docs": list(doc_ids)}).all()
     for doc_id, body in rows:
         for ln in body.splitlines():
@@ -553,7 +599,7 @@ def symbol_definitions(db: Session, plan: QueryPlan, doc_ids: set) -> dict:
                 continue
             cells = [c.strip() for c in ln.strip().strip("|").split("|")]
             if len(cells) >= 2 and cells[0] in wanted and re.search(r"[A-Za-z]{3,}", cells[1]):
-                out.setdefault(doc_id, {})[cells[0]] = cells[1]
+                out.setdefault(doc_id, {}).setdefault(cells[0], cells[1])
     return out
 
 
@@ -599,9 +645,51 @@ def question_phrases(plan: QueryPlan) -> list[str]:
 # ordering-only preferences by intent subtype (app/services/intent.py): the chunk kind that holds the answer
 _SUBTYPE_KIND = {"standards_formula_lookup": "formula", "standards_range_lookup": "table",
                  "standards_value_lookup": "table"}
+# engineering content types preferred per question kind (ordering only; legacy 0002 types map to the same)
+_WANTED_KINDS = {
+    "formula": {"formula": 0.25, "formula_context": 0.1, "definition": 0.08, "variable_definition": 0.08},
+    "table": {"table_row_group": 0.15, "table": 0.12, "definition": 0.06},
+    "definition": {"definition": 0.15, "variable_definition": 0.1, "table_row_group": 0.05},
+}
+_FORMULA_WORDS = re.compile(r"(?i)\b(?:formula|formulae|equation|expression|relation|calculated|computed)\b|"
+                            r"form[üu]l|e[şs]itli|denklem|ba[ğg]ınt|hesaplan")
+_TABLE_WORDS = re.compile(r"(?i)\b(?:table|value|values|coefficient|tolerance|deviation|limit|range)\b|"
+                          r"tablo|de[ğg]er|katsay|tolerans|sapma|aral[ıi]k")
+_DEFINE_WORDS = re.compile(r"(?i)\b(?:what is|define|definition|meaning|denotes?)\b|nedir|tan[ıi]m|anlam")
 
 
-def metadata_boosts(plan: QueryPlan, p: Passage, subtype: str | None) -> dict[str, float]:
+def question_kind(plan: QueryPlan, question: str | None, subtype: str | None) -> str | None:
+    """Which chunk kind answers the question: 'formula', 'table' or 'definition' (None = no preference)."""
+    q = question or " ".join(plan.raw_terms)
+    if subtype == "standards_formula_lookup" or _FORMULA_WORDS.search(q):
+        return "formula"
+    if subtype in ("standards_range_lookup", "standards_value_lookup") or _TABLE_WORDS.search(q) or plan.labels:
+        return "table"
+    if _DEFINE_WORDS.search(q):
+        return "definition"
+    return None
+
+
+_DESC_STOP = {"the", "and", "for", "with", "that", "from", "into", "which"}
+
+
+def defines_quantity(p: Passage, question_words: set[str]) -> bool:
+    """A formula whose left-hand quantity is what the question names: "base diameter" -> db = ... (19),
+    via the variable meanings of the formula (legend or the standard's symbol list). Parenthetical
+    qualifiers of the description ("root diameter (nominal dimension)") do not have to be asked for."""
+    for f in p.formulas or []:
+        lhs = f.get("lhs")
+        if not lhs:
+            continue
+        desc = next((v.get("description") for v in f.get("variables") or [] if v.get("symbol") == lhs), None)
+        core = re.sub(r"\([^)]*\)", " ", (desc or "").lower())
+        words = set(re.findall(r"[a-z]{3,}", core)) - _DESC_STOP
+        if words and words <= question_words:
+            return True
+    return False
+
+
+def metadata_boosts(plan: QueryPlan, p: Passage, subtype: str | None, question: str | None = None) -> dict[str, float]:
     b: dict[str, float] = {}
     lex = lexical_boost(plan, p.text)
     if lex:
@@ -619,7 +707,8 @@ def metadata_boosts(plan: QueryPlan, p: Passage, subtype: str | None) -> dict[st
         b["symbol_row"] = 0.15
     if structural_matches(plan, p.content_type):
         b["requested_structure"] = 0.2  # the question asks for a table / formula and this chunk is one
-    heading = (p.heading or "").lower()
+    # the heading of an untitled numbered clause ("5.3") is its parent's title: use the whole path
+    heading = " / ".join(p.heading_path).lower() if p.heading_path else (p.heading or "").lower()
     phrases = question_phrases(plan)
     if heading and any(ph in heading for ph in phrases if " " in ph or len(ph) >= 5):
         b["heading_phrase"] = 0.1  # "reference diameter" in "4.2.4 Reference cylinder, ..., reference diameter"
@@ -628,11 +717,34 @@ def metadata_boosts(plan: QueryPlan, p: Passage, subtype: str | None) -> dict[st
         b["defines_term"] = 0.2  # the clause titled exactly as asked ("5.5 Backlash" for "backlash nedir?")
     if p.content_type == "front_matter":
         b["front_matter"] = -0.2  # contents / foreword mention every term but define none
+    kind = question_kind(plan, question, subtype)
+    if kind:
+        pref = _WANTED_KINDS[kind].get(p.content_type)
+        # a "value lookup" intent alone is weak evidence that the answer is a table (lists, sentences and
+        # definitions answer such questions too): full weight only when the question itself says so
+        if kind == "table" and not (_TABLE_WORDS.search(question or "") or plan.labels):
+            pref = round(pref * 0.4, 3) if pref else pref
+        if pref and "content_type" not in b:
+            b["wanted_kind"] = pref
+    if kind == "formula" and p.formulas:
+        qwords = set(question_words_en(plan, question))
+        if defines_quantity(p, qwords):
+            b["defines_quantity"] = 0.3  # the equation of exactly the asked quantity
+    if p.heading_path and p.heading_path[0].startswith("Annex") and not any(c.startswith("Annex") or c[:1].isalpha()
+                                                                            for c in plan.clauses):
+        b["informative_annex"] = -0.05  # the normative body answers first unless the annex is asked for
     return b
 
 
+def question_words_en(plan: QueryPlan, question: str | None) -> list[str]:
+    """English words of the question and of its glossary concepts ("temel daire çapı" -> base, circle, diameter)."""
+    words = re.findall(r"[a-z]{3,}", ascii_lower(question or ""))
+    words += [w for alts in plan.concepts for a in alts for w in re.findall(r"[a-z]{3,}", a.lower())]
+    return list(dict.fromkeys(words))
+
+
 def search(db: Session, scopes: ScopeSet, plan: QueryPlan, *, top_k: int = 5,
-           min_coverage: float = 0.5, subtype: str | None = None) -> list[Passage]:
+           min_coverage: float = 0.5, subtype: str | None = None, question: str | None = None) -> list[Passage]:
     if plan.empty:
         return []
     exprs, params = [], {}
@@ -652,7 +764,8 @@ def search(db: Session, scopes: ScopeSet, plan: QueryPlan, *, top_k: int = 5,
         # (same rule as the Python filter below; codes are digits and '-' only)
         code_filter = "AND d.standard_code ~* :code_re"
         params["code_re"] = r"\m(" + "|".join(dict.fromkeys(plan.codes)) + r")(\M|:)"
-    fmt = {"columns": _COLUMNS, "eligible": ELIGIBLE_VERSION_SQL, "scope": scope_clause, "code_filter": code_filter}
+    fmt = {"columns": _COLUMNS, "eligible": ELIGIBLE_VERSION_SQL, "scope": scope_clause, "code_filter": code_filter,
+           "searchable": _SEARCHABLE}
     channels: dict[str, list] = {"lexical": db.execute(text(_SEARCH_SQL.format(
         query_expr=" || ".join(exprs), **fmt)), params).all()}
     q_exact = _exact_terms(plan)
@@ -680,7 +793,8 @@ def search(db: Session, scopes: ScopeSet, plan: QueryPlan, *, top_k: int = 5,
     for cid, r in rows.items():
         # the clause heading is part of the chunk's context (lineage; weight A in the tsvector): Table 2 of
         # ISO 53 speaks about the "tooth profile" of clause 5 even though its caption does not say so
-        context = f"{r.heading}\n{r.text}" if r.heading else r.text
+        # structural context (heading path, symbol meanings, table columns) is part of what the chunk says
+        context = "\n".join(x for x in (r.heading, r.context, r.text) if x)
         cov, matched = _coverage(plan, context)
         extra = [m for m in structural_matches(plan, r.content_type or "text") if m not in matched]
         extra += resolve_symbol_concepts(plan, r.text, definitions.get(r.document_id, {}), matched + extra)
@@ -691,9 +805,13 @@ def search(db: Session, scopes: ScopeSet, plan: QueryPlan, *, top_k: int = 5,
                     document_title=r.title, standard_code=r.standard_code, page_number=r.page_number,
                     locator=r.locator, text=r.text, confidence_status=r.confidence_status, rank=float(r.rank),
                     coverage=cov, matched=matched, clause=r.clause, heading=r.heading,
-                    content_type=r.content_type or "text", channels=ranks[cid], fused=round(fused[cid], 6))
+                    content_type=r.content_type or "text", channels=ranks[cid], fused=round(fused[cid], 6),
+                    role=r.chunk_role or "leaf", parent_id=r.parent_id, heading_path=list(r.heading_path or []),
+                    context=r.context or "", equation_numbers=list(r.equation_numbers or []),
+                    symbols=list(r.symbols or []), formulas=list(r.formula or []), page_start=r.page_start,
+                    page_end=r.page_end, validation_status=r.validation_status or "ok")
         p.score = round(term_coverage(plan, context, len(matched)), 4)
-        p.boosts = metadata_boosts(plan, p, subtype)
+        p.boosts = metadata_boosts(plan, p, subtype, question)
         fused_norm = (fused[cid] - lo) / (hi - lo) if hi > lo else 1.0
         order = p.score + 0.15 * fused_norm + sum(p.boosts.values())
         passages.append((order, p))
@@ -708,4 +826,111 @@ def search(db: Session, scopes: ScopeSet, plan: QueryPlan, *, top_k: int = 5,
         kept = [(o, p) for o, p in kept if p.standard_code and any(
             re.search(rf"\b{re.escape(c)}(\b|:)", p.standard_code) for c in plan.codes)]
     kept.sort(key=lambda t: t[0], reverse=True)
-    return [p for _o, p in kept[:top_k]]
+    return diversify([p for _o, p in kept], top_k)
+
+
+MAX_SIBLINGS = 2  # children of one parent (row groups of one table) in the top-k
+
+
+def diversify(ranked: list[Passage], top_k: int) -> list[Passage]:
+    """At most MAX_SIBLINGS passages per parent in the result; further siblings only fill free slots.
+    Without this, the row groups of one large table can occupy every slot and push out the clause that
+    actually answers the question."""
+    out: list[Passage] = []
+    extra: list[Passage] = []
+    per_parent: dict = {}
+    for p in ranked:
+        key = p.parent_id
+        if key is not None and per_parent.get(key, 0) >= MAX_SIBLINGS:
+            extra.append(p)
+            continue
+        if key is not None:
+            per_parent[key] = per_parent.get(key, 0) + 1
+        out.append(p)
+        if len(out) == top_k:
+            return out
+    return (out + extra)[:top_k]
+
+
+# --------------------------------------------------------------------------- parent-context expansion
+_PARENT_SQL = "SELECT text, heading_path FROM document_chunks WHERE id = :id"
+
+
+def _variable_lines(p: Passage) -> list[str]:
+    """The 'symbol: meaning [unit]' lines of the structural context (formula chunks)."""
+    return [ln for ln in (p.context or "").split("\n")[1:] if re.match(r"^\S{1,16}: ", ln)]
+
+
+def focused_parent(text: str, plan: QueryPlan, budget: int) -> str:
+    """The part of a parent window that fits ``budget``: the lines naming the question's symbols, labels or
+    concepts first (in document order, gaps marked "…"), then the lines around the hit ("[…]")."""
+    lines = text.split("\n")
+    pats = [_token_re(v, 0) for s_ in plan.symbols for v in symbol_variants(s_)]
+    pats += [_label_re(lab) for lab in plan.labels]
+    pats += [_concept_regex(a) for alts in plan.concepts for a in alts]
+    anchor = next((i for i, ln in enumerate(lines) if "[…]" in ln), None)
+    score = [sum(1 for pt in pats if pt.search(ln)) for ln in lines]
+    order = sorted(range(len(lines)), key=lambda i: (-score[i], abs(i - anchor) if anchor is not None else i))
+    keep: set[int] = set()
+    used = 0
+    for i in order:
+        if score[i] == 0 and anchor is None:
+            break
+        cost = len(lines[i]) + 2
+        if used + cost > budget:
+            continue
+        keep.add(i)
+        used += cost
+    out, prev = [], None
+    for i in sorted(keep):
+        if prev is not None and i != prev + 1:
+            out.append("…")
+        out.append(lines[i])
+        prev = i
+    return "\n".join(out)
+
+
+def build_context(db: Session, passages: list[Passage], plan: QueryPlan, budget: int) -> list[Passage]:
+    """Model-facing text of each passage within ``budget`` characters.
+
+    Each passage keeps its focused source excerpt (``text``, stored as the citation) and gets a
+    ``prompt_text``: the excerpt, the meanings of its formula symbols, the LaTeX of formulas that were
+    reconstructed with certainty (none for ``needs_review`` formulas), and - while budget remains - the
+    parent window it belongs to (the rest of its clause), so an equation is never read without its
+    definitions. Nothing is generated: every added line comes from the stored chunk metadata."""
+    used: list[Passage] = []
+    total = 0
+    for p in passages:
+        if total >= budget:
+            break
+        share = max(400, min(1400, budget - total))
+        if len(p.text) > share:
+            p.focus(plan, size=share)
+        extra: list[str] = []
+        variables = _variable_lines(p)
+        if p.formulas and variables:
+            extra.append("Değişkenler (kaynağın sembol listesi/açıklaması): " + "; ".join(variables[:12]))
+        for f in p.formulas or []:
+            if f.get("kind") == "inline":
+                continue
+            if f.get("latex"):
+                extra.append(f"LaTeX ({f.get('number')}): {f['latex']}")
+            elif f.get("status") == "needs_review":
+                extra.append(f"Eşitlik ({f.get('number')}) PDF'ten kesin olarak yeniden kurulamadı: yalnızca yukarıdaki "
+                             "satırı aktar, düzeltme.")
+        p.prompt_text = "\n".join([p.text] + extra)
+        total += len(p.prompt_text)
+        used.append(p)
+    for p in used[:2]:  # the best hits also get the rest of their clause when it fits
+        remaining = budget - total
+        if not p.parent_id or remaining < 250:
+            continue
+        row = db.execute(text(_PARENT_SQL), {"id": p.parent_id}).first()
+        if row is None:
+            continue
+        rest = row.text.replace(p.text, "[…]") if p.text in row.text else row.text
+        if len(rest) > remaining:
+            rest = focused_parent(rest, plan, remaining)
+        p.prompt_text += "\nÜST BAĞLAM (aynı madde):\n" + rest
+        total += len(rest) + 24
+    return used

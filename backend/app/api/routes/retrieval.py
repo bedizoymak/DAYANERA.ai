@@ -18,7 +18,7 @@ router = APIRouter(prefix="/retrieval", tags=["retrieval"])
 def retrieval_search(body: RetrievalIn, user: AuthenticatedUser = Depends(current_user),
                      scopes: ScopeSet = Depends(scopes_dep), db: Session = Depends(db_dep)) -> dict:
     plan = plan_query(body.query)
-    passages = search(db, scopes, plan, top_k=body.top_k)
+    passages = search(db, scopes, plan, top_k=body.top_k, question=body.query)
     audit.record(db, user.actor, "retrieval.search", target_type="corpus",
                  details={"hits": len(passages), "concepts": plan.concepts})
     db.commit()
@@ -27,4 +27,11 @@ def retrieval_search(body: RetrievalIn, user: AuthenticatedUser = Depends(curren
                           "version_number": p.version_number, "document_title": p.document_title,
                           "standard_code": p.standard_code, "page_number": p.page_number, "locator": p.locator,
                           "excerpt": p.text[:1200], "score": p.score, "coverage": p.coverage,
-                          "confidence_status": p.confidence_status} for p in passages]}
+                          "confidence_status": p.confidence_status, "chunk_id": str(p.chunk_id),
+                          "content_type": p.content_type, "chunk_role": p.role,
+                          "parent_id": str(p.parent_id) if p.parent_id else None, "clause": p.clause,
+                          "heading_path": p.heading_path, "page_start": p.page_start, "page_end": p.page_end,
+                          "equation_numbers": p.equation_numbers,
+                          "formulas": [{k: f.get(k) for k in ("number", "plain", "latex", "status")}
+                                       for f in p.formulas],
+                          "boosts": p.boosts} for p in passages]}

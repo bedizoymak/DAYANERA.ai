@@ -1,8 +1,10 @@
 """Document ingestion pipeline: versions, extraction, indexing, lineage."""
 from __future__ import annotations
 
+import dataclasses
 import hashlib
 import importlib.metadata
+import json
 import logging
 import os
 import re
@@ -23,11 +25,13 @@ from app.db.models import (
     DocumentVersion,
     ExtractedValue,
     IngestionJob,
+    MessageSource,
     KnowledgeArea,
 )
 from app.domain.enums import DRAFT_METHODS, ConfidenceStatus
 from app.ingestion import quality
-from app.ingestion.chunker import chunk_document
+from app.ingestion.chunker import CHUNKER_VERSION, Chunk, active_config, chunk_pages
+from app.ingestion.structure import DocModel
 from app.ingestion.detect import Detected, detect
 from app.ingestion.extractors.archive import extract_archive
 from app.ingestion.extractors.base import ExtractContext, ExtractionOutput
@@ -294,27 +298,87 @@ def _link_references(db: Session, doc: Document, full_text: str) -> int:
     return created
 
 
+def chunk_facts(chunks: list[Chunk], page_ok: dict[int, bool] | None = None) -> list[quality.ChunkFacts]:
+    """Gate view of chunks (also used before anything is written: ``reingest --dry-run``)."""
+    facts = []
+    for ch in chunks:
+        raw = " ".join(f.get("raw") or "" for f in ch.formulas)
+        facts.append(quality.ChunkFacts(
+            page_number=ch.page_start, text=ch.text, content_type=ch.content_type, clause=ch.clause,
+            has_lineage=bool(ch.page_start and (page_ok is None or page_ok.get(ch.page_start))),
+            content_hash=hashlib.sha256(ch.text.encode("utf-8")).hexdigest(), sources=ch.sources, heading=ch.heading,
+            page_end=ch.page_end, role=ch.role, key=ch.key, parent_key=ch.parent_key, child_keys=list(ch.child_keys),
+            tokens=ch.tokens, verbatim=ch.verbatim_text, raw_extra=raw, formulas=ch.formulas,
+            heading_path=ch.heading_path, meta_hash=meta_hash(ch), review_reasons=ch.review_reasons))
+    return facts
+
+
+def meta_hash(ch: Chunk) -> str:
+    """Hash of the structure an approval also covers: role, parent, type, path, formula forms, table cells."""
+    payload = {"role": ch.role, "parent": ch.parent_key, "type": ch.content_type, "path": ch.heading_path,
+               "context": ch.context, "eq": ch.equation_numbers, "tables": ch.table_numbers,
+               "formulas": [{k: f.get(k) for k in ("number", "plain", "latex", "status")} for f in ch.formulas],
+               "table": (ch.table or {}).get("rows"), "pages": [ch.page_start, ch.page_end]}
+    return hashlib.sha256(json.dumps(payload, ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()
+
+
+def build_chunks(doc: Document, result: ExtractionOutput) -> tuple[list[Chunk], DocModel]:
+    return chunk_pages(result.pages, standard_code=doc.standard_code, title=doc.title, config=active_config())
+
+
+def chunking_summary(chunks: list[Chunk], model: DocModel | None) -> dict:
+    """Derived statistics stored on the version (no document text)."""
+    kinds: dict[str, int] = {}
+    for c in chunks:
+        kinds[c.content_type] = kinds.get(c.content_type, 0) + 1
+    tokens = sorted(c.tokens for c in chunks if c.role != "parent")
+    formulas = [f for c in chunks if c.role != "parent" for f in c.formulas]
+    return {"chunker_version": CHUNKER_VERSION, "config": dataclasses.asdict(active_config()), "chunks": len(chunks),
+            "roles": {r: sum(c.role == r for c in chunks) for r in ("leaf", "parent", "child")},
+            "content_types": kinds, "tokens_median": tokens[len(tokens) // 2] if tokens else 0,
+            "tokens_max": tokens[-1] if tokens else 0,
+            "multi_page_chunks": sum(c.page_start != c.page_end for c in chunks),
+            "formulas": len(formulas), "formulas_latex": sum(1 for f in formulas if f.get("latex")),
+            "formulas_needs_review": sum(1 for f in formulas if f.get("status") == "needs_review"),
+            "needs_review_chunks": sum(c.validation_status != "ok" for c in chunks),
+            "structure": dict(model.stats) if model else {}}
+
+
 def _write_chunks(db: Session, doc: Document, ver: DocumentVersion, result: ExtractionOutput,
-                  page_rows: dict[int, DocumentPage]) -> list[quality.ChunkFacts]:
-    """Persist structure-aware chunks with full lineage, then read back the index coverage."""
-    facts: list[quality.ChunkFacts] = []
-    for idx, (p, ch) in enumerate(chunk_document(result.pages)):
-        page = page_rows[p.page_number]
+                  page_rows: dict[int, DocumentPage], chunks: list[Chunk] | None = None) -> list[quality.ChunkFacts]:
+    """Persist engineering chunks (parents before their children) with full lineage, then read back
+    the index coverage."""
+    chunks = build_chunks(doc, result)[0] if chunks is None else chunks
+    facts = chunk_facts(chunks, {n: bool(pr.id and pr.parser) for n, pr in page_rows.items()})
+    ids = {ch.key: uuid.uuid4() for ch in chunks}
+    by_page = {p.page_number: p for p in result.pages}
+    language = detect_language("\n".join(p.text for p in result.pages[:8]))
+    for idx, (ch, f) in enumerate(zip(chunks, facts)):
+        page = page_rows[ch.page_start]
+        pages = [page_rows[n] for n in range(ch.page_start, ch.page_end + 1) if n in page_rows]
         status = page.confidence_status
+        if any(pr.confidence_status == ConfidenceStatus.DRAFT_EXTRACTION.value for pr in pages):
+            status = ConfidenceStatus.DRAFT_EXTRACTION.value  # a chunk is only as verified as its weakest page
         if any(s.endswith("_model") for s in ch.sources) and status == ConfidenceStatus.VERIFIED_SOURCE.value:
             status = ConfidenceStatus.DRAFT_EXTRACTION.value  # model-generated text (e.g. formula LaTeX) is a draft
-        chash = hashlib.sha256(ch.text.encode("utf-8")).hexdigest()
+        p = by_page.get(ch.page_start)
         db.add(DocumentChunk(
-            document_id=doc.id, version_id=ver.id, page_id=page.id, chunk_index=idx, page_number=ch.page_number,
-            locator=ch.locator, char_start=ch.char_start, char_end=ch.char_end, text=ch.text,
-            extraction_method=p.method, confidence_status=status, page_start=ch.page_start, page_end=ch.page_end,
-            clause=ch.clause, heading=ch.heading, content_type=ch.content_type, standard_code=doc.standard_code,
-            extraction_confidence=(p.quality or {}).get("score"), source_hash=ver.sha256, content_hash=chash,
-            parser=page.parser, parser_version=page.parser_version))
-        facts.append(quality.ChunkFacts(
-            page_number=ch.page_number, text=ch.text, content_type=ch.content_type, clause=ch.clause,
-            has_lineage=bool(page.id and ch.page_start and ver.sha256 and page.parser), content_hash=chash,
-            sources=ch.sources, heading=ch.heading))
+            id=ids[ch.key], document_id=doc.id, version_id=ver.id, page_id=page.id, chunk_index=idx,
+            page_number=ch.page_start, locator=ch.locator, char_start=ch.char_start, char_end=ch.char_end,
+            text=ch.text, extraction_method=p.method if p else ch.method, confidence_status=status,
+            page_start=ch.page_start, page_end=ch.page_end, clause=ch.clause, heading=ch.heading,
+            content_type=ch.content_type, standard_code=doc.standard_code,
+            extraction_confidence=min(((pr.quality or {}).get("score", 1.0) for pr in pages), default=None),
+            source_hash=ver.sha256, content_hash=f.content_hash, parser=page.parser, parser_version=page.parser_version,
+            parent_id=ids.get(ch.parent_key) if ch.parent_key else None, chunk_role=ch.role,
+            heading_path=ch.heading_path, context=ch.context, equation_numbers=ch.equation_numbers,
+            table_numbers=ch.table_numbers, figure_numbers=ch.figure_numbers, symbols=ch.symbols, units=ch.units,
+            token_count=ch.tokens, chunker_version=CHUNKER_VERSION, formula=ch.formulas or None,
+            table_data=ch.table, validation_status=ch.validation_status, meta_hash=f.meta_hash,
+            meta={"key": ch.key, "child_keys": ch.child_keys, "review_reasons": ch.review_reasons,
+                  "derived_lines": len(ch.derived_lines), "section": ch.section_key, "language": language,
+                  "document_title": doc.title}))
+        f.has_lineage = f.has_lineage and bool(page.id and ver.sha256 and page.parser)
     db.flush()
     if facts:
         empty = {r[0] for r in db.execute(text(
@@ -323,6 +387,19 @@ def _write_chunks(db: Session, doc: Document, ver: DocumentVersion, result: Extr
             # punctuation-only fragments legitimately have no lexemes
             f.tsv_empty = i in empty and bool(re.search(r"\w", f.text))
     return facts
+
+
+_LANG_WORDS = {"en": {"the", "and", "of", "is", "shall", "for", "with", "to"},
+               "de": {"der", "die", "und", "ist", "mit", "für", "den", "das"},
+               "fr": {"le", "la", "les", "et", "est", "pour", "des", "du"},
+               "tr": {"ve", "bir", "bu", "ile", "için", "olan", "de", "da"}}
+
+
+def detect_language(sample: str) -> str:
+    words = re.findall(r"[^\W\d_]+", sample.lower())[:4000]
+    scores = {lang: sum(1 for w in words if w in vocab) for lang, vocab in _LANG_WORDS.items()}
+    best = max(scores, key=scores.get)
+    return best if scores[best] >= 5 else "und"
 
 
 def _revoke_verification(db: Session, doc: Document, ver: DocumentVersion, actor: Actor, reason: str) -> None:
@@ -389,6 +466,19 @@ def process_version(db: Session, version_id: uuid.UUID, *, actor: Actor | None =
         db.commit()
         return "failed"
 
+    status = _persist_extraction(db, doc, ver, result, actor=actor, settings=settings, storage=storage,
+                                 area_verified=area_verified)
+    db.commit()
+    write_manifest(db, storage, doc.id)
+    return status
+
+
+def _persist_extraction(db: Session, doc: Document, ver: DocumentVersion, result: ExtractionOutput, *,
+                        actor: Actor, settings: Settings, storage: Storage, area_verified: bool,
+                        chunks: list[Chunk] | None = None, model: DocModel | None = None,
+                        reingest: bool = False) -> str:
+    """Replace the pages and chunks of ``ver`` with ``result`` and apply the quality gates (one transaction;
+    the caller commits or rolls back)."""
     # --- preserve user confirmations across re-indexing of the same version
     prior_confirm = {
         p.page_number: (p.confidence_status, p.confirmed_by, p.confirmed_at, p.review_note, p.text)
@@ -448,13 +538,18 @@ def process_version(db: Session, version_id: uuid.UUID, *, actor: Actor | None =
     for m in result.archive_members:
         db.add(ArchiveMember(version_id=ver.id, **m))
 
-    facts = _write_chunks(db, doc, ver, result, page_rows)
+    if chunks is None:
+        chunks, model = build_chunks(doc, result)
+    facts = _write_chunks(db, doc, ver, result, page_rows, chunks)
     counts["chunks"] = len(facts)
 
     ver.page_count = result.metadata.get("page_count", len(result.pages)) or len(result.pages)
     ver.metadata_ = {**(ver.metadata_ or {}), **{k: v for k, v in result.metadata.items() if k != "pdf_metadata"},
                      "pdf_metadata": result.metadata.get("pdf_metadata"), "media": result.media,
-                     "standard_code_check": code_check}
+                     "standard_code_check": code_check,
+                     "chunking": chunking_summary(chunks, model),
+                     # symbol -> description/unit/clause (derived metadata, used to explain formula variables)
+                     "symbol_glossary": dict(list((model.glossary if model else {}).items())[:2000])}
     ver.extraction_summary = {"counts": counts, "methods": methods, "warnings": result.warnings,
                               "stored_only_reason": result.stored_only_reason}
     ver.parser, ver.parser_version = result.parser, result.parser_version
@@ -486,8 +581,6 @@ def process_version(db: Session, version_id: uuid.UUID, *, actor: Actor | None =
             doc.status = "failed"
         audit.record(db, actor, "ingestion.failed", outcome="failure", target_type="document", target_id=doc.id,
                      details={"version": ver.version_number, "error": ver.ingestion_error})
-        db.commit()
-        write_manifest(db, storage, doc.id)
         return "failed"
     if doc.status == "deleted":
         # a logically deleted document never becomes an active source again by re-indexing
@@ -498,12 +591,11 @@ def process_version(db: Session, version_id: uuid.UUID, *, actor: Actor | None =
     else:
         activate_version(db, doc, ver, actor)
     rel_count = _link_references(db, doc, "\n".join(p.text for p in result.pages))
-    audit.record(db, actor, "ingestion.completed", target_type="document", target_id=doc.id,
+    audit.record(db, actor, "ingestion.completed" if not reingest else "ingestion.reingested", target_type="document",
+                 target_id=doc.id,
                  details={"version": ver.version_number, "status": ver.ingestion_status, **counts,
                           "relationships_created": rel_count, "corpus_status": ver.corpus_status,
                           "parser": ver.parser, "gates_outcome": report.get("outcome")})
-    db.commit()
-    write_manifest(db, storage, doc.id)
     return ver.ingestion_status
 
 
@@ -534,3 +626,110 @@ def queue_reindex(db: Session, doc: Document, actor: Actor) -> IngestionJob | No
     audit.record(db, actor, "document.reindex", target_type="document", target_id=doc.id,
                  details={"version": ver.version_number})
     return job
+
+
+# ---------------------------------------------------------------------------
+# safe re-ingestion of one document (python -m app.cli reingest-document)
+# ---------------------------------------------------------------------------
+def _chunk_summary_db(db: Session, version_id: uuid.UUID) -> dict:
+    rows = db.execute(text("""SELECT content_type, coalesce(chunk_role, 'leaf') AS role, count(*) AS n,
+                                     coalesce(sum(cardinality(equation_numbers)), 0) AS eq
+                              FROM document_chunks WHERE version_id = :v GROUP BY 1, 2"""), {"v": version_id}).all()
+    kinds: dict[str, int] = {}
+    roles: dict[str, int] = {}
+    for r in rows:
+        kinds[r.content_type] = kinds.get(r.content_type, 0) + r.n
+        roles[r.role] = roles.get(r.role, 0) + r.n
+    return {"chunks": sum(kinds.values()), "content_types": kinds, "roles": roles,
+            "equations": int(sum(r.eq for r in rows))}
+
+
+def _message_sources_before(db: Session, version_id: uuid.UUID) -> list[tuple]:
+    return db.execute(select(MessageSource.id, MessageSource.page_number, MessageSource.excerpt)
+                      .where(MessageSource.version_id == version_id)).all()
+
+
+def _remap_message_sources(db: Session, version_id: uuid.UUID, before: list[tuple]) -> dict:
+    """Point stored citations at the new chunk that holds the same excerpt on the same page. The citation's
+    own provenance (version, page, excerpt) never changes; only the chunk link is refreshed."""
+    if not before:
+        return {"message_sources": 0, "remapped": 0}
+    chunks = db.execute(select(DocumentChunk.id, DocumentChunk.page_start, DocumentChunk.page_end, DocumentChunk.text)
+                        .where(DocumentChunk.version_id == version_id, DocumentChunk.chunk_role != "parent")).all()
+    squash = [(c.id, c.page_start, c.page_end, re.sub(r"\s+", "", c.text)) for c in chunks]
+    remapped = 0
+    for sid, page, excerpt in before:
+        probe = re.sub(r"\s+", "", excerpt or "")[:80]
+        hit = next((cid for cid, p0, p1, body in squash if page is not None and p0 <= page <= p1 and probe
+                    and probe in body), None)
+        if hit is not None:
+            db.execute(update(MessageSource).where(MessageSource.id == sid).values(chunk_id=hit))
+            remapped += 1
+    return {"message_sources": len(before), "remapped": remapped}
+
+
+def reingest_version(db: Session, version_id: uuid.UUID, *, actor: Actor | None = None,
+                     settings: Settings | None = None, dry_run: bool = True, allow_revoke: bool = False) -> dict:
+    """Re-extract and re-chunk one version SAFELY.
+
+    1. extract + chunk in memory and run every quality gate (nothing written);
+    2. compare with the stored chunks; refuse when a blocking gate fails, or when the version is
+       verified and the new extraction would revoke that approval without ``allow_revoke``;
+    3. unless ``dry_run``: replace pages/chunks inside a savepoint, re-run the gates on what was written
+       (full-text index included) and roll back to the old chunks if a blocking gate fails;
+    4. refresh the chunk links of stored chat citations and audit the result.
+    """
+    settings = settings or get_settings()
+    actor = actor or Actor.system()
+    storage = Storage(settings)
+    ver = db.get(DocumentVersion, version_id)
+    if ver is None:
+        raise ValueError("Sürüm bulunamadı")
+    doc = db.get(Document, ver.document_id)
+    area = db.get(KnowledgeArea, doc.knowledge_area_id) if doc.knowledge_area_id else None
+    area_verified = bool(area and area.is_verified_corpus)
+    data = storage.read_bytes(ver.storage_relpath)
+    det = detect(doc.original_filename, data[:8192])
+    ctx = ExtractContext(settings=settings, storage=storage, version_id=ver.id, sha256=ver.sha256,
+                         filename=doc.original_filename, abs_path=str(storage.abs(ver.storage_relpath)))
+    result = extract_bytes(data, det, ctx)
+    chunks, model = build_chunks(doc, result)
+    facts = chunk_facts(chunks)
+    code_check = validate_code(doc.standard_code, doc.original_filename)
+    staged = quality.evaluate(
+        is_pdf=(ver.metadata_ or {}).get("category") == "pdf", verified_area=area_verified,
+        standard_code=doc.standard_code, code_check=code_check, validation=result.metadata.get("pdf_validation"),
+        page_count=result.metadata.get("page_count", len(result.pages)) or len(result.pages),
+        blank_pages=result.metadata.get("blank_pages", []), pages=result.pages, chunks=facts,
+        layout=result.metadata.get("layout"), parser=result.parser, parser_version=result.parser_version)
+    report = {"document_id": str(doc.id), "version_id": str(ver.id), "standard_code": doc.standard_code,
+              "dry_run": dry_run, "applied": False, "corpus_status_before": ver.corpus_status,
+              "staged_outcome": staged["outcome"], "staged_fingerprint": staged["fingerprint"],
+              "gates": {g["id"]: g["status"] for g in staged["gates"]},
+              "old": _chunk_summary_db(db, ver.id), "new": chunking_summary(chunks, model)}
+    blocking = [g["id"] for g in staged["gates"] if g["status"] == "fail"]
+    if blocking:
+        report["blocked"] = f"blocking gates failed: {', '.join(blocking)} (nothing was changed)"
+        return report
+    if ver.corpus_status == "verified" and staged["fingerprint"] != ver.verified_fingerprint and not allow_revoke:
+        report["blocked"] = ("version is VERIFIED and the new extraction differs: applying it revokes the approval "
+                             "(re-run with --allow-revoke, then review and corpus-approve again)")
+        return report
+    if dry_run:
+        return report
+    before = _message_sources_before(db, ver.id)
+    savepoint = db.begin_nested()
+    status = _persist_extraction(db, doc, ver, result, actor=actor, settings=settings, storage=storage,
+                                 area_verified=area_verified, chunks=chunks, model=model, reingest=True)
+    written = ver.quality_report or {}
+    failed_after = [g["id"] for g in written.get("gates", []) if g["status"] == "fail"]
+    if status == "failed" or failed_after:
+        savepoint.rollback()
+        report["blocked"] = f"post-write gates failed ({', '.join(failed_after) or status}); rolled back, old chunks kept"
+        return report
+    report["message_sources"] = _remap_message_sources(db, ver.id, before)
+    savepoint.commit()
+    db.commit()
+    write_manifest(db, storage, doc.id)
+    report.update(applied=True, corpus_status_after=ver.corpus_status, outcome=written.get("outcome"))
+    return report

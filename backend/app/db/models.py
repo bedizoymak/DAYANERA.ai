@@ -1,5 +1,5 @@
-"""ORM models mirroring database/migrations/sql/0001_initial.sql, 0002_canonical_ingestion.sql and
-0003_self_maintenance.sql.
+"""ORM models mirroring database/migrations/sql/0001_initial.sql, 0002_canonical_ingestion.sql,
+0003_self_maintenance.sql and 0004_engineering_chunks.sql.
 
 The SQL migration is authoritative; these mappings intentionally omit the
 generated ``tsv`` columns (full-text queries use explicit parameterized SQL).
@@ -21,7 +21,7 @@ from sqlalchemy import (
     Text,
     func,
 )
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -193,6 +193,25 @@ class DocumentChunk(Base):
     content_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     parser: Mapped[str | None] = mapped_column(Text, nullable=True)
     parser_version: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # engineering chunks (0004): hierarchy, structural context, formula/table payloads, validation
+    parent_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("document_chunks.id", ondelete="CASCADE"), nullable=True
+    )
+    chunk_role: Mapped[str] = mapped_column(Text, default="leaf")
+    heading_path: Mapped[list[str]] = mapped_column(ARRAY(Text), default=list)
+    context: Mapped[str] = mapped_column(Text, default="")
+    equation_numbers: Mapped[list[str]] = mapped_column(ARRAY(Text), default=list)
+    table_numbers: Mapped[list[str]] = mapped_column(ARRAY(Text), default=list)
+    figure_numbers: Mapped[list[str]] = mapped_column(ARRAY(Text), default=list)
+    symbols: Mapped[list[str]] = mapped_column(ARRAY(Text), default=list)
+    units: Mapped[list[str]] = mapped_column(ARRAY(Text), default=list)
+    token_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    chunker_version: Mapped[str | None] = mapped_column(Text, nullable=True)
+    formula: Mapped[list[dict[str, Any]] | None] = mapped_column(JSONB, nullable=True)
+    table_data: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+    meta: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
+    validation_status: Mapped[str] = mapped_column(Text, default="ok")
+    meta_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
 
 class ArchiveMember(Base):

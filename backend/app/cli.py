@@ -15,6 +15,10 @@ Commands:
                        of the formula registry (exit 1 on an engine CONFLICT)
   knowledge-scan       --repos DIR [--out FILE] [--update-registry]   static reference-repository scan
   knowledge-reverify   re-run the regression of corrections verified with another engine/registry
+  inspect-document     --file PDF | --code "ISO 21771" [--type formula] [--page 25] [--clause 4.3]
+                       [--preview 80 | --full] [--export out.jsonl]   chunk inspection for one document
+  reingest-document    --code "ISO 21771" [--apply] [--allow-revoke]   safe re-extraction of one document
+                       (dry run by default: gates + old/new comparison, nothing written)
 """
 from __future__ import annotations
 
@@ -171,13 +175,22 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("command", choices=["check-config", "migrate", "seed", "serve", "reindex", "export-openapi",
                                        "sync-init", "sync-once", "sync-status", "corpus-status", "corpus-approve",
                                        "corpus-revoke", "corpus-reject", "knowledge-validate", "knowledge-scan",
-                                       "knowledge-reverify"])
+                                       "knowledge-reverify", "inspect-document", "reingest-document"])
     p.add_argument("--code", help="standart kodu (ör. 'ISO 53', 'ISO 286-1:2010')")
     p.add_argument("--by", help="onaylayan owner_admin kullanıcı adı")
     p.add_argument("--note", help="inceleme notu / gerekçe")
     p.add_argument("--repos", help="referans depoların klonlandığı klasör (DAYANERA dışında)")
     p.add_argument("--out", help="tarama manifestosunun yazılacağı dosya")
     p.add_argument("--update-registry", action="store_true", help="satır/parmak izi bilgisini kayda yaz")
+    p.add_argument("--file", help="inspect-document: PDF yolu (bellekte çıkarılır, veritabanına yazılmaz)")
+    p.add_argument("--type", dest="ctype", help="inspect-document: yalnızca bu içerik türü (formula, table_row_group ...)")
+    p.add_argument("--page", type=int, help="inspect-document: yalnızca bu sayfayı kapsayan parçalar")
+    p.add_argument("--clause", help="inspect-document: yalnızca bu madde (ve alt maddeleri)")
+    p.add_argument("--preview", type=int, default=80, help="metin önizleme uzunluğu (0 = metin yok)")
+    p.add_argument("--full", action="store_true", help="tam parça metni (telifli belge: yalnızca yerelde kullanın)")
+    p.add_argument("--export", help="JSON Lines çıktısı (varsayılan önizleme kurallarıyla)")
+    p.add_argument("--apply", action="store_true", help="reingest-document: doğrulama geçerse uygula")
+    p.add_argument("--allow-revoke", action="store_true", help="reingest-document: doğrulanmış onayı kaldırmaya izin ver")
     args = p.parse_args(argv)
     try:
         return {
@@ -191,10 +204,62 @@ def main(argv: list[str] | None = None) -> int:
             "knowledge-validate": lambda: cmd_knowledge_validate(args.out),
             "knowledge-scan": lambda: cmd_knowledge_scan(args.repos, args.out, args.update_registry),
             "knowledge-reverify": cmd_knowledge_reverify,
+            "inspect-document": lambda: cmd_inspect_document(args),
+            "reingest-document": lambda: cmd_reingest_document(args.code, args.apply, args.allow_revoke, args.by),
         }[args.command]()
     except ConfigError as exc:
         print(f"YAPILANDIRMA HATASI: {exc}", file=sys.stderr)
         return 2
+
+
+def cmd_inspect_document(args) -> int:
+    """Chunks of ONE document: from a PDF file (in memory, nothing written) or from the database."""
+    from app.ingestion import inspect
+
+    if not args.file and not args.code:
+        print("--file PDF veya --code 'ISO 21771' gerekli", file=sys.stderr)
+        return 2
+    if args.file:
+        s = get_settings()
+        rows, meta = inspect.from_file(args.file, s)
+    else:
+        from app.db.session import init_engine
+
+        init_engine()
+        rows, meta = inspect.from_db(args.code)
+    if args.export:
+        n = inspect.export(rows, meta, args.export, preview=args.preview, full=args.full)
+        print(f"{n} parça yazıldı: {args.export}")
+        return 0
+    print(inspect.render(rows, meta, preview=args.preview, full=args.full, kind=args.ctype, page=args.page,
+                         clause=args.clause))
+    return 0
+
+
+def cmd_reingest_document(code: str | None, apply: bool, allow_revoke: bool, by: str | None) -> int:
+    """Safe re-extraction of one document: dry run (default) -> validate -> replace atomically."""
+    from app.db.session import init_engine, session_scope
+    from app.ingestion.pipeline import reingest_version
+    from app.services import corpus
+    from app.services.audit import Actor
+
+    if not code:
+        print("--code gerekli (ör. --code \"ISO 21771\")", file=sys.stderr)
+        return 2
+    init_engine()
+    with session_scope() as db:
+        versions = corpus.find_versions(db, code)
+        if not versions:
+            print(f"Etkin '{code}' belgesi bulunamadı.", file=sys.stderr)
+            return 1
+        rc = 0
+        for v in versions:
+            report = reingest_version(db, v.id, actor=Actor(user_id=None, username=by or "cli-reingest"),
+                                      dry_run=not apply, allow_revoke=allow_revoke)
+            print(json.dumps(report, ensure_ascii=False, indent=1, default=str))
+            if report.get("blocked"):
+                rc = 1
+    return rc
 
 
 def cmd_knowledge_validate(out: str | None = None) -> int:

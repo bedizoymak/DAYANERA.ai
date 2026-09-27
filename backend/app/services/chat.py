@@ -66,7 +66,7 @@ from app.services.inventory import (
     pending_corpus_codes,
 )
 from app.services.notes import NotesService
-from app.services.retrieval import Passage, label_lines, plan_query, search
+from app.services.retrieval import Passage, build_context, label_lines, plan_query, search
 from app.services.serialize import message_to_dict
 
 log = logging.getLogger(__name__)
@@ -426,11 +426,14 @@ class ChatService:
             scopes = load_scopes(db, user)
             plan = plan_query(intent.question)
             passages = search(db, scopes, plan, top_k=self.settings.retrieval_top_k, min_coverage=min_cov,
-                              subtype=intent.subtype)
+                              subtype=intent.subtype, question=intent.question)
             if not passages and prev_q:
                 plan = plan_query(intent.question, context=prev_q)
                 passages = search(db, scopes, plan, top_k=self.settings.retrieval_top_k, min_coverage=min_cov,
-                                  subtype=intent.subtype)
+                                  subtype=intent.subtype, question=intent.question)
+            if passages and max(p.score for p in passages) >= self.settings.retrieval_min_score:
+                # parent-context expansion: formula/table-row hits carry their definitions, LaTeX and clause
+                passages = build_context(db, passages, plan, self.settings.retrieval_max_context_chars)
         timings["retrieval"] = ms(t0)
         plan_info = {"concepts": plan.concepts, "codes": plan.codes, "literals": plan.literals,
                      "symbols": plan.symbols, "labels": plan.labels, "clauses": plan.clauses,
@@ -452,20 +455,14 @@ class ChatService:
                                          "min_score": self.settings.retrieval_min_score, "timings_ms": timings},
                                         question=intent.question, available_codes=available)}
             return
-        # focused excerpts around the matched concepts keep the CPU prompt small
-        budget = self.settings.retrieval_max_context_chars
-        used: list[Passage] = []
-        total = 0
-        for p in passages:
-            if total >= budget:
-                break
-            p.focus(plan, size=min(900, max(400, budget - total)))
-            used.append(p)
-            total += len(p.text)
+        # build_context (above) focused each excerpt and added variable meanings, LaTeX and parent context
+        # within RETRIEVAL_MAX_CONTEXT_CHARS; the excerpt itself (p.text) stays the stored citation
+        used: list[Passage] = passages
         yield {"event": "status", "data": {"stage": "generation", "text": "Yerel model kaynaklara dayalı yanıt hazırlıyor…"}}
-        # the clause/heading lineage tells the model which clause, table or equation a passage belongs to
-        pdicts = [{"standard_code": p.standard_code, "title": p.document_title, "text": p.text,
-                   "locator": f"{p.locator} — {p.heading}" if p.heading else p.locator}
+        # the heading path tells the model which clause, table or equation a passage belongs to
+        pdicts = [{"standard_code": p.standard_code, "title": p.document_title, "text": p.prompt_text or p.text,
+                   "locator": f"{p.locator} — {' › '.join(p.heading_path[-2:])}" if p.heading_path
+                   else (f"{p.locator} — {p.heading}" if p.heading else p.locator)}
                   for p in used]
         t0 = time.perf_counter()
         extra_rules = []
@@ -490,14 +487,17 @@ class ChatService:
         yield {"event": "status", "data": {"stage": "validation", "text": "Yanıt kaynak pasajlarına göre doğrulanıyor…"}}
         t0 = time.perf_counter()
         extra = [f"{p.standard_code or ''} {p.document_title} {p.locator} {p.heading or ''}" for p in used]
-        g = validate_answer(res.content, [p.text for p in used], intent.question, extra_allowed=extra)
+        g = validate_answer(res.content, [p.prompt_text or p.text for p in used], intent.question, extra_allowed=extra)
         if g.accepted and looks_like_refusal(g.text):
             g.accepted, g.text, g.reason = False, REFUSAL_PHRASE, "model_refused"
         timings["validation"] = ms(t0)
         timings["total"] = ms(t_start)
         retrieved_meta = [{"chunk_id": str(p.chunk_id), "document_id": str(p.document_id), "version_id": str(p.version_id),
-                           "page": p.page_number, "score": p.score, "clause": p.clause, "content_type": p.content_type,
-                           "channels": p.channels, "fused": p.fused, "boosts": p.boosts} for p in used]
+                           "page": p.page_number, "page_end": p.page_end, "score": p.score, "clause": p.clause,
+                           "content_type": p.content_type, "role": p.role,
+                           "parent_id": str(p.parent_id) if p.parent_id else None, "heading_path": p.heading_path,
+                           "equations": p.equation_numbers, "channels": p.channels, "fused": p.fused,
+                           "boosts": p.boosts} for p in used]
         if not g.accepted:
             payload = self._refuse(conversation_id, user, user_msg_id, g.reason or "model_refused",
                                    {"retrieved": retrieved_meta, "plan": plan_info,

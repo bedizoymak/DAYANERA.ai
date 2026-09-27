@@ -48,10 +48,12 @@ CODE_RULE = (
     "kod varsa her birini ayrı ayrı yaz."
 )
 FORMULA_RULE = (
-    "Soru bir formül/bağıntı soruyor (hesap değil): formülü yalnızca pasajda okunur biçimde yazdığı kadarıyla aktar "
-    "ve madde/eşitlik numarasını belirt (ör. 4.2.4, Eşitlik (1)). PDF'den çıkarılan formül metni parçalı olabilir "
-    "(ör. 'd = z m t = cos z m n β (1)'): parçaları kendin yeniden düzenleyip formül KURMA, eksik terim veya "
-    "işlem EKLEME; pasajdaki tanım cümlesini ve eşitlik numarasını aktar. Sayısal hesap yapma."
+    "Soru bir formül/bağıntı soruyor (hesap değil): formülü pasajda yazdığı gibi aktar ve madde/eşitlik numarasını "
+    "belirt (ör. 4.3.10, Eşitlik (19)). Pasajda 'LaTeX (n):' satırı varsa formülü $$ ... $$ içinde o LaTeX'i "
+    "HARFİ HARFİNE kopyalayarak yaz; LaTeX satırı yoksa pasajdaki formül satırını aynen aktar (PDF'den kesin "
+    "kurulamayan formül metni parçalı olabilir: parçaları kendin yeniden düzenleyip formül KURMA, eksik terim veya "
+    "işlem EKLEME). Değişkenlerin anlamını yalnızca pasajdaki 'Değişkenler' satırından veya tanım cümlesinden al. "
+    "Sayısal hesap yapma."
 )
 RANGE_RULE = (
     "Soru bir aralık, sınır, maksimum veya minimum soruyor: aynı varlığa (ör. aynı ağız/diş sayısı, aynı sınıf) ait "

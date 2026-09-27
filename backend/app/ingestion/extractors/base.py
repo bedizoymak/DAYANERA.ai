@@ -43,7 +43,8 @@ def normalize_text(text: str) -> str:
     return out.strip()
 
 
-BLOCK_KINDS = ("heading", "text", "table", "formula", "list", "note", "caption")
+BLOCK_KINDS = ("heading", "text", "table", "formula", "legend", "figure", "figure_key", "list", "note", "example",
+               "caption")
 
 
 @dataclass
@@ -54,6 +55,9 @@ class Block:
     "A.1", "Annex A"); ``label`` names tables and equations ("Table 2", "(1)").
     ``confidence`` is the parser's own confidence for model-produced content
     (e.g. a recognized formula); ``None`` for text read from the PDF text layer.
+    ``data`` carries the structured payload of formulas (raw/plain/LaTeX forms,
+    extraction status), tables (caption, header rows, cells, units), legends
+    (variable definitions) and figures (caption, key); ``bbox`` is the page region.
     """
 
     kind: str
@@ -63,6 +67,8 @@ class Block:
     label: str | None = None
     confidence: float | None = None
     source: str | None = None  # producing layer: "pymupdf", "docling:table", ...
+    data: dict[str, Any] | None = None
+    bbox: tuple[float, float, float, float] | None = None
 
 
 @dataclass

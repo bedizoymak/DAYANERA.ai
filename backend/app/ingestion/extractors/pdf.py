@@ -27,7 +27,7 @@ from app.ingestion.parsing.symbols import symbol_lexicon
 log = logging.getLogger(__name__)
 
 MIN_NATIVE_CHARS = 40
-LAYOUT_VERSION = "iso-layout/1"
+LAYOUT_VERSION = "iso-layout/2"
 
 
 def pymupdf_version() -> str:
@@ -160,9 +160,12 @@ def extract_pdf(data: bytes, ctx: ExtractContext) -> ExtractionOutput:
     out.metadata["blank_pages"] = blank_pages
     ocr_pages = 0
     ocr_skipped = 0
+    # pass 1: text lines of every page, then the document's own running headers/footers
+    all_lines = [iso_layout.page_lines(page, state) for page in doc]
+    state.repeated = iso_layout.repeated_furniture([(p.rect.height, ln) for p, ln in zip(doc, all_lines)])
     for idx, page in enumerate(doc):
         n = idx + 1
-        lines = iso_layout.page_lines(page, state)
+        lines = all_lines[idx]
         suspects[n] = _symbol_suspects(page)
         text = normalize_text(iso_layout.page_text(lines))
         method = "native_text"
@@ -172,7 +175,11 @@ def extract_pdf(data: bytes, ctx: ExtractContext) -> ExtractionOutput:
             if rebuilt and not is_degenerate(rebuilt):
                 text, method = rebuilt, "native_text_rebuilt"
         if method == "native_text" and len(text) >= MIN_NATIVE_CHARS:
-            blocks = iso_layout.detect_blocks(page, lines, state)
+            # pass 2: table grids, inline symbols joined into their text rows, then the structure blocks
+            tables = iso_layout.page_tables(page)
+            lines = iso_layout.merge_inline_fragments(page, lines, state, [t.bbox for t in tables])
+            text = normalize_text(iso_layout.page_text(lines))
+            blocks = iso_layout.detect_blocks(page, lines, state, tables)
         conf = None
         if len(text) < MIN_NATIVE_CHARS:
             if settings.ocr_enabled and ocr_pages < settings.ocr_max_pages_per_document:
@@ -212,7 +219,11 @@ def extract_pdf(data: bytes, ctx: ExtractContext) -> ExtractionOutput:
             uncertain_total += k
     out.metadata["layout"] = {"symbol_glyphs_mapped": state.stats["symbol_glyphs_mapped"],
                               "uncertain_symbol_glyphs": uncertain_total, "rotated_lines": state.stats["rotated_lines"],
-                              "unmapped_symbol_fonts": sorted(unmapped_fonts)}
+                              "unmapped_symbol_fonts": sorted(unmapped_fonts),
+                              "repeated_furniture": sorted(state.repeated),
+                              **{k: state.stats[k] for k in ("inline_merges", "repeated_furniture_lines", "formulas",
+                                                             "formulas_needs_review", "tables_grid", "tables_lines",
+                                                             "legends", "figures")}}
     if ocr_pages:
         out.warnings.append(f"{ocr_pages} sayfa yerel OCR ile okundu: içerik 'Taslak çıkarım' olarak işaretlendi.")
     if ocr_skipped:
@@ -228,7 +239,7 @@ def extract_pdf(data: bytes, ctx: ExtractContext) -> ExtractionOutput:
     return out
 
 
-_MATH_PI_FONT = re.compile(r"mathpi|greekwithmath", re.IGNORECASE)
+_MATH_PI_FONT = re.compile(r"mathpi|greekwithmath|isoams|mt-?extra|cmsy|msam|msbm", re.IGNORECASE)
 
 
 def _symbol_suspects(page: "pymupdf.Page") -> list[tuple[str, str]]:

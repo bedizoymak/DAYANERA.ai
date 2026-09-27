@@ -47,9 +47,11 @@ def reviewer_by_username(db: Session, username: str) -> Reviewer:
 
 
 def current_fingerprint(db: Session, ver: DocumentVersion, doc: Document) -> str:
-    hashes = db.execute(select(DocumentChunk.content_hash).where(DocumentChunk.version_id == ver.id)
-                        .order_by(DocumentChunk.chunk_index)).scalars().all()
-    return fingerprint(ver.parser, ver.parser_version, doc.standard_code, [h or "" for h in hashes])
+    """Same parts as quality.evaluate: text hash, plus the structure hash of engineering chunks (0004)."""
+    rows = db.execute(select(DocumentChunk.content_hash, DocumentChunk.meta_hash).where(DocumentChunk.version_id == ver.id)
+                      .order_by(DocumentChunk.chunk_index)).all()
+    return fingerprint(ver.parser, ver.parser_version, doc.standard_code,
+                       [f"{h or ''}:{m}" if m else (h or "") for h, m in rows])
 
 
 def _load(db: Session, version_id: uuid.UUID) -> tuple[DocumentVersion, Document, KnowledgeArea | None]:

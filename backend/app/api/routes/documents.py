@@ -375,7 +375,16 @@ def version_chunks(doc_id: str, vid: str, request: Request, user: AuthenticatedU
         "content_type": c.content_type, "standard_code": c.standard_code, "extraction_method": c.extraction_method,
         "confidence_status": c.confidence_status, "extraction_confidence": c.extraction_confidence,
         "source_hash": c.source_hash, "content_hash": c.content_hash, "parser": c.parser,
-        "parser_version": c.parser_version, "preview": c.text[:240]} for c in rows]}
+        "parser_version": c.parser_version, "preview": c.text[:240],
+        # engineering chunks (0004)
+        "chunk_role": c.chunk_role, "parent_id": str(c.parent_id) if c.parent_id else None,
+        "heading_path": c.heading_path or [], "equation_numbers": c.equation_numbers or [],
+        "table_numbers": c.table_numbers or [], "figure_numbers": c.figure_numbers or [],
+        "symbols": c.symbols or [], "units": c.units or [], "token_count": c.token_count,
+        "chunker_version": c.chunker_version, "validation_status": c.validation_status,
+        "formulas": [{k: f.get(k) for k in ("number", "plain", "latex", "status", "reasons")}
+                     for f in (c.formula or [])],
+        "meta_hash": c.meta_hash} for c in rows]}
 
 
 # ----------------------------------------------------------------------------

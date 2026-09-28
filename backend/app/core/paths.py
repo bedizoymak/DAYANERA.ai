@@ -30,6 +30,25 @@ def fs(path: str | os.PathLike[str]) -> str:
     return _LONG_PREFIX + s
 
 
+def fs_tree(path: str | os.PathLike[str]) -> str:
+    """Return an extended-length root for recursive Windows tree walks.
+
+    A short root can still contain a descendant beyond ``MAX_PATH``.  Using
+    the extended-length form for the walk itself lets ``os.walk`` enumerate
+    those descendants; ``fs`` remains conservative for libraries that do not
+    accept the prefix on short paths.
+    """
+    raw = os.fspath(path)
+    if os.name != "nt":
+        return os.path.abspath(raw)
+    if raw.startswith(_LONG_PREFIX):
+        return raw
+    s = os.path.abspath(raw)
+    if s.startswith("\\\\"):
+        return _UNC_LONG_PREFIX + s[2:]
+    return _LONG_PREFIX + s
+
+
 def strip_long_prefix(path: str) -> str:
     if path.startswith(_UNC_LONG_PREFIX):
         return "\\\\" + path[len(_UNC_LONG_PREFIX):]

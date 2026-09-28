@@ -17,7 +17,7 @@ from pathlib import Path
 from sqlalchemy import select
 
 from app.core.config import Settings
-from app.core.paths import fs, strip_long_prefix
+from app.core.paths import fs, fs_tree, strip_long_prefix
 from app.db.models import Document, DocumentVersion, SystemState
 from app.db.session import session_scope
 from app.ingestion.pipeline import area_by_slug, mark_document_deleted, register_version_from_path
@@ -86,7 +86,7 @@ class Watcher:
             return  # never mark everything deleted because a folder is temporarily unavailable
         seen: set[str] = set()
         now = time.time()
-        for dirpath, _dirs, files in os.walk(fs(root)):
+        for dirpath, _dirs, files in os.walk(fs_tree(root)):
             for name in files:
                 low = name.lower()
                 if name.startswith(SKIP_PREFIXES) or low.endswith(SKIP_SUFFIXES) or low in SKIP_NAMES:

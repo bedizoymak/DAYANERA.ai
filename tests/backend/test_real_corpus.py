@@ -5,6 +5,9 @@ project root only; nothing is written to the real corpus or database.
 """
 from __future__ import annotations
 
+import os
+from pathlib import Path
+
 import shutil
 import time
 
@@ -13,7 +16,7 @@ import pytest
 from app.core.paths import fs
 from conftest import REPO
 
-REAL = REPO / "iso booklets"
+REAL = Path(os.environ.get("DAYANERA_CORPUS_DIR") or REPO / "iso booklets")  # override: renamed copies
 WANTED = {
     "ISO 53, 2, 1998": "ISO 53:1998",
     "ISO 21771, 1, 2007": "ISO 21771:2007",

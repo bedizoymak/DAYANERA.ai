@@ -17,6 +17,7 @@ from __future__ import annotations
 import json
 import math
 import os
+from pathlib import Path
 import re
 import shutil
 import time
@@ -263,7 +264,7 @@ REAL_PDFS = {"ISO 53, 2, 1998": "ISO 53:1998", "ISO 21771, 1, 2007": "ISO 21771:
 def strict_corpus(settings, admin):
     from conftest import REPO
 
-    src = REPO / "iso booklets"
+    src = Path(os.environ.get("DAYANERA_CORPUS_DIR") or REPO / "iso booklets")
     if not src.exists():
         pytest.skip("Gerçek ISO korpusu yok")
     dest = settings.iso_booklets_path / "real"  # same folder/names as test_real_corpus: no duplicates

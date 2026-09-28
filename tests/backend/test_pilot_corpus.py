@@ -14,6 +14,7 @@ under test, so synthetic look-alikes of other test modules never interfere.
 from __future__ import annotations
 
 import os
+from pathlib import Path
 import shutil
 import time
 import uuid
@@ -25,7 +26,7 @@ from app.domain.enums import REFUSAL_PHRASE
 from conftest import REPO, run_jobs
 
 pytestmark = pytest.mark.corpus
-REAL = REPO / "iso booklets"
+REAL = Path(os.environ.get("DAYANERA_CORPUS_DIR") or REPO / "iso booklets")  # override: renamed copies
 PILOT = {"ISO 53, 2, 1998": "ISO 53:1998", "ISO 21771, 1, 2007": "ISO 21771:2007"}
 STAGE2 = {"ISO 54, 2, 1996": "ISO 54:1996", "ISO 286, 2, 2010": "ISO 286-2:2010",
           "Geometrical product specifications (GPS)_ ISO code system": "ISO 286-1:2010",
@@ -98,11 +99,20 @@ def test_pilot_quality_gates(pilot):
         assert _gates(d)["chunk_lineage"]["status"] == _gates(d)["fulltext_index"]["status"] == "pass"
         assert _gates(d)["critical_content"]["status"] == "pass"  # αP/αFP/mn/mt/da/df, clauses, tables, equations
         assert _gates(d)["structure"]["status"] == _gates(d)["traceability"]["status"] == "pass"
-    assert iso21771["current_version"]["corpus_status"] == "extracted"
-    # ISO 53 stores ∞ as "•" (Symbol font) and ≤ as "<" (Math-Pi font): only a person can confirm these
+    # engineering chunker (canonical-ingestion/2): equations whose 2-D layout cannot be reconstructed with
+    # certainty, and math-font glyphs without Unicode meaning (ISO 21771 ISOamsr "W" = ⩾ on s. 32), are
+    # listed for a human check; nothing else may need attention
+    assert iso21771["current_version"]["corpus_status"] == "needs_review"
+    attention = {k for k, g in _gates(iso21771).items() if g["status"] != "pass"}
+    assert attention <= {"formula_extraction", "uncertain_symbol_glyphs"}
+    assert 32 in _gates(iso21771)["uncertain_symbol_glyphs"]["pages"]
+    assert _gates(iso21771)["formula_extraction"]["value"]["latex"] >= 150
+    assert _gates(iso21771)["chunk_structure"]["status"] in ("pass", "review")
+    # ISO 53 stores ∞ as "•" (Symbol font) and ≤ as "<" (Math-Pi font): only a person can confirm these;
+    # its Eq. (3) prints 90° with the degree sign as the letter "o" (never rewritten)
     assert iso53["current_version"]["corpus_status"] == "needs_review"
     attention = {k for k, g in _gates(iso53).items() if g["status"] != "pass"}
-    assert attention == {"uncertain_symbol_glyphs"}
+    assert attention == {"uncertain_symbol_glyphs", "formula_extraction"}
     assert {3, 6} <= set(_gates(iso53)["uncertain_symbol_glyphs"]["pages"])
 
 

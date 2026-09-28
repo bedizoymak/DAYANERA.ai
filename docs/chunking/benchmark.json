@@ -1,0 +1,1831 @@
+{
+ "baseline_commit": "b69692f",
+ "variants": {
+  "old": {
+   "ingest_seconds": 55.2,
+   "chunks": {
+    "chunks_retrievable": 1683,
+    "chunks_parent": 0,
+    "tokens_avg": 229.4,
+    "tokens_median": 141,
+    "tokens_p95": 889,
+    "tokens_max": 1288,
+    "tiny_chunks_lt25": 0.1153,
+    "page_spanning_chunks": 0.0,
+    "formula_found": "15/15",
+    "formula_complete_unit": "12/15",
+    "formula_exact_form": "0/13",
+    "formula_latex": "0/15",
+    "table_rows_found": "8/8",
+    "table_rows_with_header": "8/8",
+    "heading_present": 0.9122,
+    "heading_full_path": 0.0,
+    "page_provenance": 1.0,
+    "verbatim_traced": 0.9994,
+    "per_formula": [
+     {
+      "formula": "ISO 53 (1)",
+      "found": true,
+      "complete_unit": true,
+      "exact": false,
+      "latex": false,
+      "canonical_known": true
+     },
+     {
+      "formula": "ISO 53 (2)",
+      "found": true,
+      "complete_unit": true,
+      "exact": false,
+      "latex": false,
+      "canonical_known": true
+     },
+     {
+      "formula": "ISO 21771 (1)",
+      "found": true,
+      "complete_unit": true,
+      "exact": false,
+      "latex": false,
+      "canonical_known": true
+     },
+     {
+      "formula": "ISO 21771 (2)",
+      "found": true,
+      "complete_unit": true,
+      "exact": false,
+      "latex": false,
+      "canonical_known": true
+     },
+     {
+      "formula": "ISO 21771 (13)",
+      "found": true,
+      "complete_unit": true,
+      "exact": false,
+      "latex": false,
+      "canonical_known": true
+     },
+     {
+      "formula": "ISO 21771 (19)",
+      "found": true,
+      "complete_unit": false,
+      "exact": false,
+      "latex": false,
+      "canonical_known": true
+     },
+     {
+      "formula": "ISO 21771 (24)",
+      "found": true,
+      "complete_unit": true,
+      "exact": false,
+      "latex": false,
+      "canonical_known": true
+     },
+     {
+      "formula": "ISO 21771 (33)",
+      "found": true,
+      "complete_unit": false,
+      "exact": false,
+      "latex": false,
+      "canonical_known": true
+     },
+     {
+      "formula": "ISO 21771 (34)",
+      "found": true,
+      "complete_unit": false,
+      "exact": false,
+      "latex": false,
+      "canonical_known": true
+     },
+     {
+      "formula": "ISO 1328-1 (1)",
+      "found": true,
+      "complete_unit": true,
+      "exact": false,
+      "latex": false,
+      "canonical_known": true
+     },
+     {
+      "formula": "ISO 1328-1 (5)",
+      "found": true,
+      "complete_unit": true,
+      "exact": false,
+      "latex": false,
+      "canonical_known": true
+     },
+     {
+      "formula": "ISO 1328-1 (6)",
+      "found": true,
+      "complete_unit": true,
+      "exact": false,
+      "latex": false,
+      "canonical_known": true
+     },
+     {
+      "formula": "ISO 1328-1 (9)",
+      "found": true,
+      "complete_unit": true,
+      "exact": false,
+      "latex": false,
+      "canonical_known": true
+     },
+     {
+      "formula": "ISO 4468 (1)",
+      "found": true,
+      "complete_unit": true,
+      "exact": false,
+      "latex": false,
+      "canonical_known": false
+     },
+     {
+      "formula": "ISO 4468 (2)",
+      "found": true,
+      "complete_unit": true,
+      "exact": false,
+      "latex": false,
+      "canonical_known": false
+     }
+    ]
+   },
+   "retrieval": {
+    "queries": [
+     {
+      "id": "53-alphaP",
+      "kind": "table",
+      "set": "tuning",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true
+     },
+     {
+      "id": "53-haP",
+      "kind": "table",
+      "set": "tuning",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true
+     },
+     {
+      "id": "53-hfP",
+      "kind": "table",
+      "set": "tuning",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true
+     },
+     {
+      "id": "53-rhofP",
+      "kind": "table",
+      "set": "tuning",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true
+     },
+     {
+      "id": "53-cP",
+      "kind": "table",
+      "set": "tuning",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true
+     },
+     {
+      "id": "53-pitch",
+      "kind": "formula",
+      "set": "tuning",
+      "hit1": false,
+      "hit4": true,
+      "mrr": 0.5,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": false
+     },
+     {
+      "id": "53-eq2",
+      "kind": "formula",
+      "set": "tuning",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true
+     },
+     {
+      "id": "53-typeD",
+      "kind": "table",
+      "set": "tuning",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true
+     },
+     {
+      "id": "53-alphaFP",
+      "kind": "table",
+      "set": "tuning",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true
+     },
+     {
+      "id": "53-5.4",
+      "kind": "table",
+      "set": "tuning",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true
+     },
+     {
+      "id": "21771-d",
+      "kind": "formula",
+      "set": "tuning",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true
+     },
+     {
+      "id": "21771-mt",
+      "kind": "formula",
+      "set": "tuning",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true
+     },
+     {
+      "id": "21771-da",
+      "kind": "formula",
+      "set": "tuning",
+      "hit1": false,
+      "hit4": true,
+      "mrr": 0.5,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": false
+     },
+     {
+      "id": "21771-df",
+      "kind": "formula",
+      "set": "tuning",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true
+     },
+     {
+      "id": "21771-db",
+      "kind": "formula",
+      "set": "tuning",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true
+     },
+     {
+      "id": "21771-alphat",
+      "kind": "formula",
+      "set": "tuning",
+      "hit1": false,
+      "hit4": true,
+      "mrr": 0.5,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true
+     },
+     {
+      "id": "21771-pn",
+      "kind": "formula",
+      "set": "tuning",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true
+     },
+     {
+      "id": "21771-h",
+      "kind": "formula",
+      "set": "tuning",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true
+     },
+     {
+      "id": "21771-u",
+      "kind": "table",
+      "set": "tuning",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true
+     },
+     {
+      "id": "21771-4.2.7",
+      "kind": "table",
+      "set": "tuning",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true
+     },
+     {
+      "id": "21771-aw",
+      "kind": "table",
+      "set": "tuning",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 0.5,
+      "grounded": true,
+      "citation_ok": true
+     },
+     {
+      "id": "neg-53-torque",
+      "kind": "table",
+      "set": "tuning",
+      "abstained": true
+     },
+     {
+      "id": "neg-21771-ra",
+      "kind": "table",
+      "set": "tuning",
+      "abstained": true
+     },
+     {
+      "id": "en-base-circle-diameter",
+      "kind": "formula",
+      "set": "tuning",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true,
+      "formula_context_complete": false
+     },
+     {
+      "id": "en-53-dedendum",
+      "kind": "table",
+      "set": "tuning",
+      "hit1": false,
+      "hit4": true,
+      "mrr": 0.25,
+      "recall4": 0.5,
+      "grounded": true,
+      "citation_ok": false
+     },
+     {
+      "id": "en-21771-tip",
+      "kind": "formula",
+      "set": "tuning",
+      "hit1": false,
+      "hit4": true,
+      "mrr": 0.25,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": false,
+      "formula_context_complete": false
+     },
+     {
+      "id": "en-21771-root",
+      "kind": "formula",
+      "set": "tuning",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true,
+      "formula_context_complete": false
+     },
+     {
+      "id": "en-21771-mt",
+      "kind": "formula",
+      "set": "tuning",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true,
+      "formula_context_complete": true
+     },
+     {
+      "id": "en-21771-d",
+      "kind": "formula",
+      "set": "tuning",
+      "hit1": false,
+      "hit4": true,
+      "mrr": 0.5,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": false,
+      "formula_context_complete": true
+     },
+     {
+      "id": "en-21771-alphat",
+      "kind": "formula",
+      "set": "tuning",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true,
+      "formula_context_complete": true
+     },
+     {
+      "id": "en-21771-pn",
+      "kind": "formula",
+      "set": "tuning",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true,
+      "formula_context_complete": true
+     },
+     {
+      "id": "en-21771-h",
+      "kind": "formula",
+      "set": "tuning",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true,
+      "formula_context_complete": true
+     },
+     {
+      "id": "en-1328-fpt",
+      "kind": "formula",
+      "set": "tuning",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true,
+      "formula_context_complete": true
+     },
+     {
+      "id": "en-1328-FpT",
+      "kind": "formula",
+      "set": "tuning",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true,
+      "formula_context_complete": true
+     },
+     {
+      "id": "en-1328-FaT",
+      "kind": "formula",
+      "set": "tuning",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true,
+      "formula_context_complete": true
+     },
+     {
+      "id": "en-1328-dM",
+      "kind": "formula",
+      "set": "tuning",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true,
+      "formula_context_complete": true
+     },
+     {
+      "id": "tr-1328-fpt",
+      "kind": "formula",
+      "set": "tuning",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true,
+      "formula_context_complete": true
+     },
+     {
+      "id": "en-4468-test7",
+      "kind": "formula",
+      "set": "tuning",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true,
+      "formula_context_complete": true
+     },
+     {
+      "id": "en-286-2-H",
+      "kind": "table",
+      "set": "tuning",
+      "hit1": false,
+      "hit4": false,
+      "mrr": 0.0,
+      "recall4": 0.0,
+      "grounded": false,
+      "citation_ok": false
+     },
+     {
+      "id": "en-1101-flatness",
+      "kind": "definition",
+      "set": "tuning",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true
+     },
+     {
+      "id": "en-14104-FD",
+      "kind": "text",
+      "set": "tuning",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 0.5,
+      "grounded": true,
+      "citation_ok": true
+     },
+     {
+      "id": "en-53-symbols",
+      "kind": "definition",
+      "set": "tuning",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true
+     },
+     {
+      "id": "neg-21771-lubricant",
+      "kind": "text",
+      "set": "tuning",
+      "abstained": true
+     },
+     {
+      "id": "neg-1328-price",
+      "kind": "text",
+      "set": "tuning",
+      "abstained": false
+     },
+     {
+      "id": "ho-21771-alphayt",
+      "kind": "formula",
+      "set": "heldout",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true,
+      "formula_context_complete": true
+     },
+     {
+      "id": "ho-21771-roll",
+      "kind": "formula",
+      "set": "heldout",
+      "hit1": false,
+      "hit4": true,
+      "mrr": 0.5,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": false,
+      "formula_context_complete": true
+     },
+     {
+      "id": "ho-21771-inv",
+      "kind": "formula",
+      "set": "heldout",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true,
+      "formula_context_complete": true
+     },
+     {
+      "id": "ho-21771-pt",
+      "kind": "formula",
+      "set": "heldout",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true,
+      "formula_context_complete": true
+     },
+     {
+      "id": "ho-1328-lambda",
+      "kind": "formula",
+      "set": "heldout",
+      "hit1": false,
+      "hit4": true,
+      "mrr": 0.3333,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": false,
+      "formula_context_complete": true
+     },
+     {
+      "id": "ho-1328-fHa",
+      "kind": "formula",
+      "set": "heldout",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true,
+      "formula_context_complete": true
+     },
+     {
+      "id": "ho-1328-fHb",
+      "kind": "formula",
+      "set": "heldout",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true,
+      "formula_context_complete": true
+     },
+     {
+      "id": "ho-4468-test8a",
+      "kind": "formula",
+      "set": "heldout",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true,
+      "formula_context_complete": true
+     },
+     {
+      "id": "ho-286-2-shaft-h",
+      "kind": "table",
+      "set": "heldout",
+      "hit1": false,
+      "hit4": false,
+      "mrr": 0.0,
+      "recall4": 0.0,
+      "grounded": false,
+      "citation_ok": false
+     },
+     {
+      "id": "ho-2490-dims",
+      "kind": "table",
+      "set": "heldout",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true
+     },
+     {
+      "id": "ho-286-1-IT",
+      "kind": "table",
+      "set": "heldout",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true
+     },
+     {
+      "id": "ho-1101-straightness",
+      "kind": "definition",
+      "set": "heldout",
+      "hit1": false,
+      "hit4": true,
+      "mrr": 0.3333,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": false
+     },
+     {
+      "id": "ho-neg-53-hardness",
+      "kind": "text",
+      "set": "heldout",
+      "abstained": true
+     },
+     {
+      "id": "ho-neg-286-bolt",
+      "kind": "text",
+      "set": "heldout",
+      "abstained": true
+     }
+    ],
+    "aggregate": {
+     "queries": 58,
+     "positives": 52,
+     "hit@1": 0.7885,
+     "hit@4": 0.9615,
+     "recall@4": 0.9327,
+     "mrr": 0.859,
+     "answer_grounding": 0.9615,
+     "citation_correct@1": 0.8077,
+     "formula_context_complete": 0.8636,
+     "negatives_abstained": "5/6",
+     "hit@1[formula]": 0.7812,
+     "hit@1[table]": 0.8125,
+     "hit@1[definition]": 0.6667,
+     "hit@1[text]": 1.0
+    },
+    "tuning": {
+     "queries": 44,
+     "positives": 40,
+     "hit@1": 0.825,
+     "hit@4": 0.975,
+     "recall@4": 0.9375,
+     "mrr": 0.8875,
+     "answer_grounding": 0.975,
+     "citation_correct@1": 0.85,
+     "formula_context_complete": 0.7857,
+     "negatives_abstained": "3/4",
+     "hit@1[formula]": 0.7917,
+     "hit@1[table]": 0.8462,
+     "hit@1[definition]": 1.0,
+     "hit@1[text]": 1.0
+    },
+    "heldout": {
+     "queries": 14,
+     "positives": 12,
+     "hit@1": 0.6667,
+     "hit@4": 0.9167,
+     "recall@4": 0.9167,
+     "mrr": 0.7639,
+     "answer_grounding": 0.9167,
+     "citation_correct@1": 0.6667,
+     "formula_context_complete": 1.0,
+     "negatives_abstained": "2/2",
+     "hit@1[formula]": 0.75,
+     "hit@1[table]": 0.6667,
+     "hit@1[definition]": 0.0
+    }
+   },
+   "per_document": {
+    "ISO 1101:2017": {
+     "chunks_retrievable": 443,
+     "tokens_median": 124,
+     "tokens_max": 1077,
+     "heading_full_path": 0.0,
+     "page_spanning_chunks": 0.0
+    },
+    "ISO 1328-1:2013": {
+     "chunks_retrievable": 224,
+     "tokens_median": 96.0,
+     "tokens_max": 1059,
+     "heading_full_path": 0.0,
+     "page_spanning_chunks": 0.0
+    },
+    "ISO 14104:2017": {
+     "chunks_retrievable": 59,
+     "tokens_median": 247,
+     "tokens_max": 1245,
+     "heading_full_path": 0.0,
+     "page_spanning_chunks": 0.0
+    },
+    "ISO 21771:2007": {
+     "chunks_retrievable": 217,
+     "tokens_median": 124,
+     "tokens_max": 1008,
+     "heading_full_path": 0.0,
+     "page_spanning_chunks": 0.0
+    },
+    "ISO 2490:2007": {
+     "chunks_retrievable": 26,
+     "tokens_median": 203.5,
+     "tokens_max": 1183,
+     "heading_full_path": 0.0,
+     "page_spanning_chunks": 0.0
+    },
+    "ISO 286-1:2010": {
+     "chunks_retrievable": 170,
+     "tokens_median": 100.0,
+     "tokens_max": 1288,
+     "heading_full_path": 0.0,
+     "page_spanning_chunks": 0.0
+    },
+    "ISO 286-2:2010": {
+     "chunks_retrievable": 197,
+     "tokens_median": 632,
+     "tokens_max": 990,
+     "heading_full_path": 0.0,
+     "page_spanning_chunks": 0.0
+    },
+    "ISO 4468:2020": {
+     "chunks_retrievable": 101,
+     "tokens_median": 116,
+     "tokens_max": 1147,
+     "heading_full_path": 0.0,
+     "page_spanning_chunks": 0.0
+    },
+    "ISO 53:1998": {
+     "chunks_retrievable": 29,
+     "tokens_median": 45,
+     "tokens_max": 249,
+     "heading_full_path": 0.0,
+     "page_spanning_chunks": 0.0
+    },
+    "ISO 54:1996": {
+     "chunks_retrievable": 5,
+     "tokens_median": 171,
+     "tokens_max": 310,
+     "heading_full_path": 0.0,
+     "page_spanning_chunks": 0.0
+    },
+    "ISO/TR 10064-1:1992": {
+     "chunks_retrievable": 85,
+     "tokens_median": 257,
+     "tokens_max": 419,
+     "heading_full_path": 0.0,
+     "page_spanning_chunks": 0.0
+    },
+    "ISO/TR 10828:2015": {
+     "chunks_retrievable": 127,
+     "tokens_median": 228,
+     "tokens_max": 680,
+     "heading_full_path": 0.0,
+     "page_spanning_chunks": 0.0
+    }
+   },
+   "ground_truth_misses": []
+  },
+  "new": {
+   "ingest_seconds": 69.8,
+   "chunks": {
+    "chunks_retrievable": 3615,
+    "chunks_parent": 430,
+    "tokens_avg": 135.6,
+    "tokens_median": 138,
+    "tokens_p95": 306,
+    "tokens_max": 525,
+    "tiny_chunks_lt25": 0.1408,
+    "page_spanning_chunks": 0.1306,
+    "formula_found": "15/15",
+    "formula_complete_unit": "15/15",
+    "formula_exact_form": "13/13",
+    "formula_latex": "15/15",
+    "table_rows_found": "8/8",
+    "table_rows_with_header": "8/8",
+    "heading_present": 0.9542,
+    "heading_full_path": 0.9542,
+    "page_provenance": 1.0,
+    "verbatim_traced": 0.9687,
+    "per_formula": [
+     {
+      "formula": "ISO 53 (1)",
+      "found": true,
+      "complete_unit": true,
+      "exact": true,
+      "latex": true,
+      "canonical_known": true
+     },
+     {
+      "formula": "ISO 53 (2)",
+      "found": true,
+      "complete_unit": true,
+      "exact": true,
+      "latex": true,
+      "canonical_known": true
+     },
+     {
+      "formula": "ISO 21771 (1)",
+      "found": true,
+      "complete_unit": true,
+      "exact": true,
+      "latex": true,
+      "canonical_known": true
+     },
+     {
+      "formula": "ISO 21771 (2)",
+      "found": true,
+      "complete_unit": true,
+      "exact": true,
+      "latex": true,
+      "canonical_known": true
+     },
+     {
+      "formula": "ISO 21771 (13)",
+      "found": true,
+      "complete_unit": true,
+      "exact": true,
+      "latex": true,
+      "canonical_known": true
+     },
+     {
+      "formula": "ISO 21771 (19)",
+      "found": true,
+      "complete_unit": true,
+      "exact": true,
+      "latex": true,
+      "canonical_known": true
+     },
+     {
+      "formula": "ISO 21771 (24)",
+      "found": true,
+      "complete_unit": true,
+      "exact": true,
+      "latex": true,
+      "canonical_known": true
+     },
+     {
+      "formula": "ISO 21771 (33)",
+      "found": true,
+      "complete_unit": true,
+      "exact": true,
+      "latex": true,
+      "canonical_known": true
+     },
+     {
+      "formula": "ISO 21771 (34)",
+      "found": true,
+      "complete_unit": true,
+      "exact": true,
+      "latex": true,
+      "canonical_known": true
+     },
+     {
+      "formula": "ISO 1328-1 (1)",
+      "found": true,
+      "complete_unit": true,
+      "exact": true,
+      "latex": true,
+      "canonical_known": true
+     },
+     {
+      "formula": "ISO 1328-1 (5)",
+      "found": true,
+      "complete_unit": true,
+      "exact": true,
+      "latex": true,
+      "canonical_known": true
+     },
+     {
+      "formula": "ISO 1328-1 (6)",
+      "found": true,
+      "complete_unit": true,
+      "exact": true,
+      "latex": true,
+      "canonical_known": true
+     },
+     {
+      "formula": "ISO 1328-1 (9)",
+      "found": true,
+      "complete_unit": true,
+      "exact": true,
+      "latex": true,
+      "canonical_known": true
+     },
+     {
+      "formula": "ISO 4468 (1)",
+      "found": true,
+      "complete_unit": true,
+      "exact": false,
+      "latex": true,
+      "canonical_known": false
+     },
+     {
+      "formula": "ISO 4468 (2)",
+      "found": true,
+      "complete_unit": true,
+      "exact": false,
+      "latex": true,
+      "canonical_known": false
+     }
+    ]
+   },
+   "retrieval": {
+    "queries": [
+     {
+      "id": "53-alphaP",
+      "kind": "table",
+      "set": "tuning",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true
+     },
+     {
+      "id": "53-haP",
+      "kind": "table",
+      "set": "tuning",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true
+     },
+     {
+      "id": "53-hfP",
+      "kind": "table",
+      "set": "tuning",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true
+     },
+     {
+      "id": "53-rhofP",
+      "kind": "table",
+      "set": "tuning",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true
+     },
+     {
+      "id": "53-cP",
+      "kind": "table",
+      "set": "tuning",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true
+     },
+     {
+      "id": "53-pitch",
+      "kind": "formula",
+      "set": "tuning",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true
+     },
+     {
+      "id": "53-eq2",
+      "kind": "formula",
+      "set": "tuning",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true
+     },
+     {
+      "id": "53-typeD",
+      "kind": "table",
+      "set": "tuning",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true
+     },
+     {
+      "id": "53-alphaFP",
+      "kind": "table",
+      "set": "tuning",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true
+     },
+     {
+      "id": "53-5.4",
+      "kind": "table",
+      "set": "tuning",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true
+     },
+     {
+      "id": "21771-d",
+      "kind": "formula",
+      "set": "tuning",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true
+     },
+     {
+      "id": "21771-mt",
+      "kind": "formula",
+      "set": "tuning",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true
+     },
+     {
+      "id": "21771-da",
+      "kind": "formula",
+      "set": "tuning",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true
+     },
+     {
+      "id": "21771-df",
+      "kind": "formula",
+      "set": "tuning",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true
+     },
+     {
+      "id": "21771-db",
+      "kind": "formula",
+      "set": "tuning",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true
+     },
+     {
+      "id": "21771-alphat",
+      "kind": "formula",
+      "set": "tuning",
+      "hit1": false,
+      "hit4": true,
+      "mrr": 0.3333,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true
+     },
+     {
+      "id": "21771-pn",
+      "kind": "formula",
+      "set": "tuning",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true
+     },
+     {
+      "id": "21771-h",
+      "kind": "formula",
+      "set": "tuning",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true
+     },
+     {
+      "id": "21771-u",
+      "kind": "table",
+      "set": "tuning",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true
+     },
+     {
+      "id": "21771-4.2.7",
+      "kind": "table",
+      "set": "tuning",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true
+     },
+     {
+      "id": "21771-aw",
+      "kind": "table",
+      "set": "tuning",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true
+     },
+     {
+      "id": "neg-53-torque",
+      "kind": "table",
+      "set": "tuning",
+      "abstained": true
+     },
+     {
+      "id": "neg-21771-ra",
+      "kind": "table",
+      "set": "tuning",
+      "abstained": true
+     },
+     {
+      "id": "en-base-circle-diameter",
+      "kind": "formula",
+      "set": "tuning",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true,
+      "formula_context_complete": true
+     },
+     {
+      "id": "en-53-dedendum",
+      "kind": "table",
+      "set": "tuning",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true
+     },
+     {
+      "id": "en-21771-tip",
+      "kind": "formula",
+      "set": "tuning",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true,
+      "formula_context_complete": true
+     },
+     {
+      "id": "en-21771-root",
+      "kind": "formula",
+      "set": "tuning",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true,
+      "formula_context_complete": true
+     },
+     {
+      "id": "en-21771-mt",
+      "kind": "formula",
+      "set": "tuning",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true,
+      "formula_context_complete": true
+     },
+     {
+      "id": "en-21771-d",
+      "kind": "formula",
+      "set": "tuning",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true,
+      "formula_context_complete": true
+     },
+     {
+      "id": "en-21771-alphat",
+      "kind": "formula",
+      "set": "tuning",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true,
+      "formula_context_complete": true
+     },
+     {
+      "id": "en-21771-pn",
+      "kind": "formula",
+      "set": "tuning",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true,
+      "formula_context_complete": true
+     },
+     {
+      "id": "en-21771-h",
+      "kind": "formula",
+      "set": "tuning",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true,
+      "formula_context_complete": true
+     },
+     {
+      "id": "en-1328-fpt",
+      "kind": "formula",
+      "set": "tuning",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true,
+      "formula_context_complete": true
+     },
+     {
+      "id": "en-1328-FpT",
+      "kind": "formula",
+      "set": "tuning",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true,
+      "formula_context_complete": true
+     },
+     {
+      "id": "en-1328-FaT",
+      "kind": "formula",
+      "set": "tuning",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true,
+      "formula_context_complete": true
+     },
+     {
+      "id": "en-1328-dM",
+      "kind": "formula",
+      "set": "tuning",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true,
+      "formula_context_complete": true
+     },
+     {
+      "id": "tr-1328-fpt",
+      "kind": "formula",
+      "set": "tuning",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true,
+      "formula_context_complete": true
+     },
+     {
+      "id": "en-4468-test7",
+      "kind": "formula",
+      "set": "tuning",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true,
+      "formula_context_complete": true
+     },
+     {
+      "id": "en-286-2-H",
+      "kind": "table",
+      "set": "tuning",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true
+     },
+     {
+      "id": "en-1101-flatness",
+      "kind": "definition",
+      "set": "tuning",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true
+     },
+     {
+      "id": "en-14104-FD",
+      "kind": "text",
+      "set": "tuning",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 0.5,
+      "grounded": true,
+      "citation_ok": true
+     },
+     {
+      "id": "en-53-symbols",
+      "kind": "definition",
+      "set": "tuning",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true
+     },
+     {
+      "id": "neg-21771-lubricant",
+      "kind": "text",
+      "set": "tuning",
+      "abstained": true
+     },
+     {
+      "id": "neg-1328-price",
+      "kind": "text",
+      "set": "tuning",
+      "abstained": false
+     },
+     {
+      "id": "ho-21771-alphayt",
+      "kind": "formula",
+      "set": "heldout",
+      "hit1": false,
+      "hit4": true,
+      "mrr": 0.5,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true,
+      "formula_context_complete": true
+     },
+     {
+      "id": "ho-21771-roll",
+      "kind": "formula",
+      "set": "heldout",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true,
+      "formula_context_complete": true
+     },
+     {
+      "id": "ho-21771-inv",
+      "kind": "formula",
+      "set": "heldout",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true,
+      "formula_context_complete": true
+     },
+     {
+      "id": "ho-21771-pt",
+      "kind": "formula",
+      "set": "heldout",
+      "hit1": false,
+      "hit4": true,
+      "mrr": 0.3333,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": false,
+      "formula_context_complete": true
+     },
+     {
+      "id": "ho-1328-lambda",
+      "kind": "formula",
+      "set": "heldout",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true,
+      "formula_context_complete": true
+     },
+     {
+      "id": "ho-1328-fHa",
+      "kind": "formula",
+      "set": "heldout",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true,
+      "formula_context_complete": true
+     },
+     {
+      "id": "ho-1328-fHb",
+      "kind": "formula",
+      "set": "heldout",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true,
+      "formula_context_complete": true
+     },
+     {
+      "id": "ho-4468-test8a",
+      "kind": "formula",
+      "set": "heldout",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true,
+      "formula_context_complete": true
+     },
+     {
+      "id": "ho-286-2-shaft-h",
+      "kind": "table",
+      "set": "heldout",
+      "hit1": false,
+      "hit4": false,
+      "mrr": 0.0,
+      "recall4": 0.0,
+      "grounded": false,
+      "citation_ok": false
+     },
+     {
+      "id": "ho-2490-dims",
+      "kind": "table",
+      "set": "heldout",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true
+     },
+     {
+      "id": "ho-286-1-IT",
+      "kind": "table",
+      "set": "heldout",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true
+     },
+     {
+      "id": "ho-1101-straightness",
+      "kind": "definition",
+      "set": "heldout",
+      "hit1": true,
+      "hit4": true,
+      "mrr": 1.0,
+      "recall4": 1.0,
+      "grounded": true,
+      "citation_ok": true
+     },
+     {
+      "id": "ho-neg-53-hardness",
+      "kind": "text",
+      "set": "heldout",
+      "abstained": true
+     },
+     {
+      "id": "ho-neg-286-bolt",
+      "kind": "text",
+      "set": "heldout",
+      "abstained": true
+     }
+    ],
+    "aggregate": {
+     "queries": 58,
+     "positives": 52,
+     "hit@1": 0.9231,
+     "hit@4": 0.9808,
+     "recall@4": 0.9712,
+     "mrr": 0.9455,
+     "answer_grounding": 0.9808,
+     "citation_correct@1": 0.9615,
+     "formula_context_complete": 1.0,
+     "negatives_abstained": "5/6",
+     "hit@1[formula]": 0.9062,
+     "hit@1[table]": 0.9375,
+     "hit@1[definition]": 1.0,
+     "hit@1[text]": 1.0
+    },
+    "tuning": {
+     "queries": 44,
+     "positives": 40,
+     "hit@1": 0.975,
+     "hit@4": 1.0,
+     "recall@4": 0.9875,
+     "mrr": 0.9833,
+     "answer_grounding": 1.0,
+     "citation_correct@1": 1.0,
+     "formula_context_complete": 1.0,
+     "negatives_abstained": "3/4",
+     "hit@1[formula]": 0.9583,
+     "hit@1[table]": 1.0,
+     "hit@1[definition]": 1.0,
+     "hit@1[text]": 1.0
+    },
+    "heldout": {
+     "queries": 14,
+     "positives": 12,
+     "hit@1": 0.75,
+     "hit@4": 0.9167,
+     "recall@4": 0.9167,
+     "mrr": 0.8194,
+     "answer_grounding": 0.9167,
+     "citation_correct@1": 0.8333,
+     "formula_context_complete": 1.0,
+     "negatives_abstained": "2/2",
+     "hit@1[formula]": 0.75,
+     "hit@1[table]": 0.6667,
+     "hit@1[definition]": 1.0
+    }
+   },
+   "per_document": {
+    "ISO 1101:2017": {
+     "chunks_retrievable": 672,
+     "tokens_median": 58.0,
+     "tokens_max": 329,
+     "heading_full_path": 0.9494,
+     "page_spanning_chunks": 0.1295
+    },
+    "ISO 1328-1:2013": {
+     "chunks_retrievable": 234,
+     "tokens_median": 89.0,
+     "tokens_max": 315,
+     "heading_full_path": 0.9485,
+     "page_spanning_chunks": 0.1068
+    },
+    "ISO 14104:2017": {
+     "chunks_retrievable": 124,
+     "tokens_median": 125.0,
+     "tokens_max": 283,
+     "heading_full_path": 0.6694,
+     "page_spanning_chunks": 0.0565
+    },
+    "ISO 21771:2007": {
+     "chunks_retrievable": 449,
+     "tokens_median": 52,
+     "tokens_max": 337,
+     "heading_full_path": 0.9866,
+     "page_spanning_chunks": 0.0958
+    },
+    "ISO 2490:2007": {
+     "chunks_retrievable": 72,
+     "tokens_median": 159.0,
+     "tokens_max": 321,
+     "heading_full_path": 0.9306,
+     "page_spanning_chunks": 0.0278
+    },
+    "ISO 286-1:2010": {
+     "chunks_retrievable": 336,
+     "tokens_median": 184.5,
+     "tokens_max": 325,
+     "heading_full_path": 0.9405,
+     "page_spanning_chunks": 0.0298
+    },
+    "ISO 286-2:2010": {
+     "chunks_retrievable": 957,
+     "tokens_median": 231,
+     "tokens_max": 525,
+     "heading_full_path": 0.9875,
+     "page_spanning_chunks": 0.2539
+    },
+    "ISO 4468:2020": {
+     "chunks_retrievable": 210,
+     "tokens_median": 158.0,
+     "tokens_max": 335,
+     "heading_full_path": 0.9619,
+     "page_spanning_chunks": 0.0476
+    },
+    "ISO 53:1998": {
+     "chunks_retrievable": 28,
+     "tokens_median": 61.0,
+     "tokens_max": 335,
+     "heading_full_path": 0.8889,
+     "page_spanning_chunks": 0.0357
+    },
+    "ISO 54:1996": {
+     "chunks_retrievable": 5,
+     "tokens_median": 115,
+     "tokens_max": 310,
+     "heading_full_path": 0.0,
+     "page_spanning_chunks": 0.2
+    },
+    "ISO/TR 10064-1:1992": {
+     "chunks_retrievable": 107,
+     "tokens_median": 150,
+     "tokens_max": 327,
+     "heading_full_path": 0.0,
+     "page_spanning_chunks": 0.0654
+    },
+    "ISO/TR 10828:2015": {
+     "chunks_retrievable": 421,
+     "tokens_median": 59,
+     "tokens_max": 321,
+     "heading_full_path": 0.0,
+     "page_spanning_chunks": 0.0855
+    }
+   },
+   "ground_truth_misses": []
+  }
+ }
+}

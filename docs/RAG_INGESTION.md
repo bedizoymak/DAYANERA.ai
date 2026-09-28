@@ -1,5 +1,12 @@
 # Canonical ingestion and retrieval (DAYANERA.ai)
 
+> **Updated by the engineering chunker (canonical-ingestion/2, migration 0004).** Chunks are no longer
+> page-bound and carry a parent/child hierarchy, heading paths, formula payloads (raw / normalised / LaTeX)
+> and table payloads; see [ENGINEERING_DOCUMENT_CHUNKING_GUIDE.md](ENGINEERING_DOCUMENT_CHUNKING_GUIDE.md)
+> for the current pipeline and [ENGINEERING_CHUNKING_IMPLEMENTATION_REPORT.md](ENGINEERING_CHUNKING_IMPLEMENTATION_REPORT.md)
+> for the measurements. The "Chunk lineage" statement below that chunks never cross page boundaries
+> describes the previous chunker. The lifecycle, gates, approval and retrieval channels described here still apply.
+
 DAYANERA stays the system of record: documents, versions, pages, chunks, provenance,
 verification status, access scopes, audit, intent routing, the calculation engine and the
 grounding/answer policy. Parsers are replaceable layers that feed its canonical entities.

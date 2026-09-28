@@ -21,6 +21,25 @@ describe('KaTeX math presentation', () => {
     expect(screen.getByTestId('math-markdown')).toHaveTextContent('\\frac{1');
   });
 
+  it('renders a formula quoted from the engineering chunk LaTeX as display math', () => {
+    // the verified context carries "LaTeX (19): d_{b} = d \cos \alpha_{t}"; the model copies it into $$ ... $$
+    const { container } = render(
+      <MemoryRouter>
+        <MessageView message={msg({
+          content: String.raw`Temel çap (ISO 97771, 4.3.1, Eşitlik (19)): $$d_{b} = d \cos \alpha_{t}$$` + '\n\n' +
+            '$$\n' + String.raw`d_{b} = \frac{z m_{n} \cos \alpha_{t}}{\cos \beta}` + '\n$$\n\n[S1]',
+          answer_mode: 'verified_source',
+        }) as never} />
+      </MemoryRouter>,
+    );
+    expect(container.querySelectorAll('.katex').length).toBeGreaterThanOrEqual(2); // inline $$…$$ and a display block
+    expect(container.querySelector('.katex-display')).toBeInTheDocument();
+    const visible = Array.from(container.querySelectorAll('.katex-html')).map((e) => e.textContent).join(' ');
+    expect(visible).not.toContain('\\cos');
+    expect(visible).not.toContain('\\frac');
+    expect(visible).toContain('cos');
+  });
+
   it('keeps ordinary Markdown and citations working beside math', () => {
     const { container } = render(
       <MemoryRouter>

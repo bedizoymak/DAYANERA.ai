@@ -1,0 +1,62 @@
+{
+ "model": "qwen3:14b-q4_K_M",
+ "samples": 214,
+ "content_types": {
+  "section": 16,
+  "front_matter": 16,
+  "table": 16,
+  "note": 16,
+  "reference": 16,
+  "definition": 16,
+  "normative_requirement": 16,
+  "general_text": 16,
+  "table_row_group": 16,
+  "figure_caption": 16,
+  "variable_definition": 6,
+  "example": 11,
+  "formula": 16,
+  "formula_context": 16,
+  "procedure": 5
+ },
+ "fitted": {
+  "intercept": 0.217,
+  "word": 0.842,
+  "long_word_chars": 0.276,
+  "digit": 1.249,
+  "non_ascii": 1.327,
+  "punct": 0.987,
+  "newline": 1.108
+ },
+ "error_current_estimator": {
+  "mean_abs_pct": 15.3,
+  "p95_abs_pct": 39.05,
+  "underestimate_share": 0.86
+ },
+ "error_fitted": {
+  "mean_abs_pct": 5.43,
+  "p95_abs_pct": 14.95,
+  "underestimate_share": 0.537
+ },
+ "error_chars_div_4": {
+  "mean_abs_pct": 23.48,
+  "p95_abs_pct": 60.19,
+  "underestimate_share": 0.659
+ },
+ "tokens_per_char_by_type": {
+  "section": 0.301,
+  "front_matter": 0.297,
+  "table": 0.389,
+  "note": 0.264,
+  "reference": 0.256,
+  "definition": 0.267,
+  "normative_requirement": 0.275,
+  "general_text": 0.378,
+  "table_row_group": 0.548,
+  "figure_caption": 0.24,
+  "variable_definition": 0.244,
+  "example": 0.309,
+  "formula": 0.479,
+  "formula_context": 0.362,
+  "procedure": 0.358
+ }
+}

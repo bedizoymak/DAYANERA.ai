@@ -84,12 +84,19 @@ def test_structure_chunks_keep_clauses_apart_and_carry_lineage():
             Block("text", "continued text of the module clause"),
             Block("table", "Table 2 - Values\n| mn | 2 |", label="Table 2")]),
     ]
-    chunks = [c for _p, c in chunk_document(pages)]
-    assert [(c.clause, c.content_type, c.page_start) for c in chunks] == [
-        ("4.2.4", "formula", 1), ("4.2.7", "text", 1), ("4.2.7", "text", 2), ("4.2.7", "table", 2)]
-    assert chunks[0].heading == "4.2.4 Reference diameter" and "(1)" in chunks[0].text
-    assert chunks[2].heading == "4.2.7 Module"  # the clause context crosses the page break
-    assert all(c.page_start == c.page_end for c in chunks)  # page-exact citations
+    chunks = chunk_document(pages)
+    # 4.2.4 is one knowledge unit (heading + lead-in + formula); in 4.2.7 the sentence that runs over the
+    # page break stays ONE chunk citing pages 1-2, and the table is its own unit under the section parent
+    leaf = chunks[0]
+    assert (leaf.clause, leaf.content_type, leaf.role, leaf.page_start) == ("4.2.4", "formula", "leaf", 1)
+    assert leaf.heading == "4.2.4 Reference diameter" and "(1)" in leaf.text and "determined by" in leaf.text
+    assert leaf.heading_path == ["4 Individual gears", "4.2.4 Reference diameter"]
+    text = next(c for c in chunks if "continued text" in c.text and c.role != "parent")
+    assert text.clause == "4.2.7" and (text.page_start, text.page_end) == (1, 2) and "found as" in text.text
+    table = next(c for c in chunks if c.content_type == "table" and c.role != "parent")
+    assert table.clause == "4.2.7" and table.page_start == 2 and "| mn | 2 |" in table.text
+    assert all(len({c.clause for c in chunks if c.key in p.child_keys} | {p.clause}) == 1
+               for p in chunks if p.role == "parent")  # a parent never mixes two clauses
 
 
 # =========================================================================== unit: gates
@@ -251,11 +258,13 @@ def test_every_chunk_carries_full_lineage(admin, canonical_docs):
     ver = doc["current_version"]
     chunks = admin.get(f"/documents/{doc['id']}/versions/{ver['id']}/chunks").json()["items"]
     assert chunks
+    from app.ingestion.chunker import CONTENT_TYPES
+
     for c in chunks:
-        assert c["page_id"] and c["page_start"] == c["page_end"] and c["chunk_index"] is not None
+        assert c["page_id"] and c["page_start"] <= c["page_end"] and c["chunk_index"] is not None
         assert c["standard_code"] == CODE_GEOM and c["source_hash"] == ver["sha256"]
         assert c["parser"] == "pymupdf" and c["parser_version"] and c["extraction_method"] == "native_text"
-        assert c["content_type"] in ("text", "table", "formula", "list", "note", "definition", "front_matter")
+        assert c["content_type"] in CONTENT_TYPES and c["heading_path"] is not None
         assert c["extraction_confidence"] is not None
     by_clause = {c["clause"]: c for c in chunks}
     assert by_clause["4.2.4"]["content_type"] == "formula"

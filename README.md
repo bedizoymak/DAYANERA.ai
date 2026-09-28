@@ -141,6 +141,19 @@ go to the **review queue** ("İnceleme kuyruğu"). An authorized user must confi
 used in calculations, in memory or as evidence. The confirmation, the actor, the time, the original value and the
 source version are all audited.
 
+**Engineering chunking.** PDFs are split along their engineering structure (clause → equation with its lead-in and
+"where" legend, table with repeated header, figure, note), not by a character window. Equations are rebuilt from
+the page geometry into normalised text and LaTeX (never by a model; uncertain ones are flagged for review), chunks
+carry their heading path, page range and parent context. Maintainer guide:
+[docs/ENGINEERING_DOCUMENT_CHUNKING_GUIDE.md](docs/ENGINEERING_DOCUMENT_CHUNKING_GUIDE.md). Inspect or safely
+re-ingest one document:
+
+```powershell
+cd backend
+.venv\Scripts\python -m app.cli inspect-document --code "ISO 21771" --type formula
+.venv\Scripts\python -m app.cli reingest-document --code "ISO 21771"          # dry run; add --apply to replace
+```
+
 ## Answer policy
 
 | Badge | Meaning |

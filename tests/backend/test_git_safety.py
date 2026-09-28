@@ -21,7 +21,11 @@ MUST_TRACK = [".env.example", "README.md", "docker-compose.yml", "backend/requir
               # the formula registry is source, not runtime data: it must never land in an ignored data/ folder
               "backend/app/knowledge/registry_data/gear_formulas.json",
               "backend/app/knowledge/registry_data/reference_repositories.json",
-              "database/migrations/sql/0003_self_maintenance.sql"]
+              "database/migrations/sql/0003_self_maintenance.sql",
+              # engineering chunking: migration, maintainer docs and numbers-only benchmark artefacts
+              "database/migrations/sql/0004_engineering_chunks.sql",
+              "docs/ENGINEERING_CHUNKING_IMPLEMENTATION_REPORT.md", "docs/ENGINEERING_DOCUMENT_CHUNKING_GUIDE.md",
+              "docs/chunking/benchmark.json"]
 
 
 def _ignored(path: str) -> bool:

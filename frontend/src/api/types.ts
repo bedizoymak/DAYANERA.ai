@@ -299,3 +299,16 @@ export interface Readiness {
   ollama: { reachable: boolean; model_available: boolean; model: string | null };
   messages: string[];
 }
+
+export type CorpusState = 'EMPTY' | 'INDEXED_UNAPPROVED' | 'READY';
+
+export interface CorpusStatus {
+  state?: CorpusState;
+  indexed_active_documents?: number;
+  indexed_active_chunks?: number;
+  owner_approved_active_versions?: number;
+  verified_active_chunks?: number;
+  empty_verified_corpus?: boolean;
+  failed?: Array<{ title: string; error: string | null }>;
+  jobs?: Record<string, number>;
+}

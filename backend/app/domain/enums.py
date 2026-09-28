@@ -67,6 +67,14 @@ class IngestionStatus(StrEnum):
     FAILED = "failed"
 
 
+class CorpusState(StrEnum):
+    """Availability of the verified ISO corpus, separate from ingestion state."""
+
+    EMPTY = "EMPTY"
+    INDEXED_UNAPPROVED = "INDEXED_UNAPPROVED"
+    READY = "READY"
+
+
 class SourceKind(StrEnum):
     WATCHED = "watched"
     UPLOAD = "upload"

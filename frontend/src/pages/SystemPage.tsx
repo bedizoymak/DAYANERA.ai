@@ -55,7 +55,8 @@ export default function SystemPage() {
         </section>
         <section className="card">
           <h2>Korpus / indeks</h2>
-          <p>Doğrulanmış etkin parça: <strong>{c.verified_active_chunks ?? 0}</strong> {c.empty_verified_corpus && <span className="chip chip-bad">boş</span>}</p>
+          <p>Durum: <strong>{c.state === 'EMPTY' ? 'boş' : c.state === 'INDEXED_UNAPPROVED' ? 'indekslendi, onay bekliyor' : c.state === 'READY' ? 'hazır' : 'bilinmiyor'}</strong></p>
+          <p>İndekslenmiş etkin parça: <strong>{c.indexed_active_chunks ?? 0}</strong> · Owner onaylı etkin sürüm: <strong>{c.owner_approved_active_versions ?? 0}</strong> · Kanıt için uygun parça: <strong>{c.verified_active_chunks ?? 0}</strong></p>
           <p className="small">Belgeler: {Object.entries(c.areas ?? {}).map(([a, st]) => `${a}: ${Object.entries(st as object).map(([k, v]) => `${k} ${v}`).join(', ')}`).join(' | ')}</p>
           <p className="small">Sayfalar: {Object.entries(c.pages_by_status ?? {}).map(([k, v]) => `${k} ${v}`).join(' · ')}</p>
           <p className="small">İşler: {Object.entries(c.jobs ?? {}).map(([k, v]) => `${k} ${v}`).join(' · ') || '—'} · bekleyen taslak değer: {c.draft_values_pending ?? 0}</p>

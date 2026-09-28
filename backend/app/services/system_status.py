@@ -11,6 +11,7 @@ from app.core.config import Settings
 from app.core.paths import dir_size_bytes
 from app.db.models import Document, DocumentVersion, ExtractedValue, IngestionJob, KnowledgeArea
 from app.db.session import current_migration_revision, database_ping
+from app.domain.enums import ACTIVE_EVIDENCE_STATUSES, CorpusState
 from app.inference.base import LLMProvider
 from app.inference.registry import provider_status
 from app.services.self_maintenance import stats as knowledge_stats
@@ -40,6 +41,16 @@ def supabase_status(settings: Settings) -> dict[str, Any]:
     }
 
 
+def _corpus_state(indexed_documents: int, indexed_chunks: int, approved_versions: int,
+                  eligible_chunks: int) -> CorpusState:
+    """Classify availability without conflating indexing with approval."""
+    if not indexed_documents and not indexed_chunks:
+        return CorpusState.EMPTY
+    if approved_versions and eligible_chunks:
+        return CorpusState.READY
+    return CorpusState.INDEXED_UNAPPROVED
+
+
 def corpus_status(db: Session) -> dict[str, Any]:
     area_rows = db.execute(
         select(KnowledgeArea.slug, Document.status, func.count())
@@ -52,12 +63,37 @@ def corpus_status(db: Session) -> dict[str, Any]:
     ing = dict(db.execute(select(DocumentVersion.ingestion_status, func.count())
                           .where(DocumentVersion.is_active.is_(True)).group_by(DocumentVersion.ingestion_status)).all())
     pages = dict(db.execute(text("SELECT confidence_status, count(*) FROM document_pages GROUP BY 1")).all())
+    indexed_documents = db.execute(text("""
+        SELECT count(*) FROM documents d
+        JOIN document_versions v ON v.id = d.current_version_id
+        JOIN knowledge_areas ka ON ka.id = d.knowledge_area_id
+        WHERE ka.is_verified_corpus AND d.status = 'active'
+          AND v.is_active AND v.state = 'active' AND v.ingestion_status = 'indexed'
+    """)).scalar() or 0
+    indexed_chunks = db.execute(text("""
+        SELECT count(*) FROM document_chunks c
+        JOIN document_versions v ON v.id = c.version_id
+        JOIN documents d ON d.id = c.document_id AND d.current_version_id = v.id
+        JOIN knowledge_areas ka ON ka.id = d.knowledge_area_id
+        WHERE ka.is_verified_corpus AND d.status = 'active'
+          AND v.is_active AND v.state = 'active' AND v.ingestion_status = 'indexed'
+    """)).scalar() or 0
+    approved_versions = db.execute(text("""
+        SELECT count(*) FROM documents d
+        JOIN document_versions v ON v.id = d.current_version_id
+        JOIN knowledge_areas ka ON ka.id = d.knowledge_area_id
+        WHERE ka.is_verified_corpus AND d.status = 'active'
+          AND v.is_active AND v.state = 'active' AND v.ingestion_status = 'indexed'
+          AND v.corpus_status = 'verified'
+    """)).scalar() or 0
     chunks_active = db.execute(text("""
         SELECT count(*) FROM document_chunks c JOIN document_versions v ON v.id = c.version_id
-        JOIN documents d ON d.id = c.document_id JOIN knowledge_areas ka ON ka.id = d.knowledge_area_id
+        JOIN documents d ON d.id = c.document_id AND d.current_version_id = v.id
+        JOIN knowledge_areas ka ON ka.id = d.knowledge_area_id
         WHERE ka.is_verified_corpus AND d.status = 'active' AND v.is_active AND v.ingestion_status = 'indexed'
-          AND v.corpus_status = 'verified'
-          AND c.confidence_status IN ('verified_source','user_confirmed')""")).scalar()
+          AND v.state = 'active' AND v.corpus_status = 'verified'
+          AND c.confidence_status = ANY(:evidence_statuses)"""),
+        {"evidence_statuses": list(ACTIVE_EVIDENCE_STATUSES)}).scalar() or 0
     corpus = dict(db.execute(select(DocumentVersion.corpus_status, func.count())
                              .where(DocumentVersion.is_active.is_(True)).group_by(DocumentVersion.corpus_status)).all())
     jobs = dict(db.execute(select(IngestionJob.status, func.count()).group_by(IngestionJob.status)).all())
@@ -66,11 +102,19 @@ def corpus_status(db: Session) -> dict[str, Any]:
     failed = db.execute(select(Document.title, DocumentVersion.ingestion_error)
                         .join(DocumentVersion, DocumentVersion.document_id == Document.id)
                         .where(DocumentVersion.ingestion_status == "failed").limit(10)).all()
+    state = _corpus_state(indexed_documents, indexed_chunks, approved_versions, chunks_active)
     return {
         "areas": areas, "active_version_ingestion": ing, "active_version_corpus": corpus, "pages_by_status": pages,
-        "verified_active_chunks": chunks_active, "jobs": jobs, "draft_values_pending": drafts,
+        "state": state.value,
+        "indexed_active_documents": indexed_documents,
+        "indexed_active_chunks": indexed_chunks,
+        "owner_approved_active_versions": approved_versions,
+        "verified_active_chunks": chunks_active,
+        "jobs": jobs, "draft_values_pending": drafts,
         "failed": [{"title": t, "error": e} for t, e in failed],
-        "empty_verified_corpus": (chunks_active or 0) == 0,
+        # Deprecated compatibility field. The structured state is authoritative;
+        # an indexed-but-unapproved corpus is not empty.
+        "empty_verified_corpus": state is CorpusState.EMPTY,
     }
 
 

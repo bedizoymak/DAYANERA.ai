@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api/client';
-import type { Readiness } from '../api/types';
+import type { CorpusStatus, Readiness } from '../api/types';
 
 interface CorpusInfo {
-  corpus?: { empty_verified_corpus?: boolean; failed?: Array<{ title: string; error: string }>; jobs?: Record<string, number> };
+  corpus?: CorpusStatus;
 }
 
 /** Actionable Turkish warnings: Ollama / DB unavailable, empty corpus, failed ingestion. */
@@ -21,12 +21,16 @@ export default function StatusBanner() {
         out.push(...r.messages);
         if (r.database.ok) {
           const s = await api.get<CorpusInfo>('/system/status');
-          if (s.corpus?.empty_verified_corpus) {
+          if (s.corpus?.state === 'EMPTY') {
             const queued = (s.corpus.jobs?.queued ?? 0) + (s.corpus.jobs?.running ?? 0);
             out.push(
               queued > 0
                 ? `Doğrulanmış ISO korpusu henüz indeksleniyor (${queued} iş kuyrukta). Teknik sorular bu süreçte "Bu kaynak setinde doğrulayamadım" yanıtı alabilir.`
-                : "Doğrulanmış ISO korpusu boş: 'iso booklets' klasörüne PDF ekleyin veya Belge arşivinden yeniden indeksleyin.",
+                : "İndekslenmiş ISO korpusu bulunamadı: 'iso booklets' klasörüne PDF ekleyin veya Belge arşivinden yeniden indeksleyin.",
+            );
+          } else if (s.corpus?.state === 'INDEXED_UNAPPROVED') {
+            out.push(
+              `ISO korpusu indekslendi (${s.corpus.indexed_active_documents ?? 0} belge, ${s.corpus.indexed_active_chunks ?? 0} parça) ancak henüz doğrulanmış/onaylanmış etkin sürüm bulunmuyor. Teknik kanıt ve hesaplamalar owner onayından sonra kullanılabilir.`,
             );
           } else if (s.corpus?.jobs && (s.corpus.jobs.queued ?? 0) + (s.corpus.jobs.running ?? 0) > 0) {
             note = `Arka planda ${(s.corpus.jobs.queued ?? 0) + (s.corpus.jobs.running ?? 0)} belge işleniyor (OCR sayfaları zaman alabilir).`;

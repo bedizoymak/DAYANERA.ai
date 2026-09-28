@@ -40,7 +40,7 @@ if ($LASTEXITCODE -eq 0) { Write-Fail '.env.example yok sayilmamali'; $fail += '
 Write-Step 'Izlenen ve hazirlanan (staged) dosyalar'
 $tracked = @(git ls-files) + @(git diff --cached --name-only --diff-filter=ACMR)
 $tracked = $tracked | Where-Object { $_ } | Sort-Object -Unique
-$forbidden = @('^\.env$', '^\.env\.(?!example$)', '(^|/)data/', '^agent-notes/', 'IMPLEMENTATION_REPORT\.md$', '\.log$',
+$forbidden = @('^\.env$', '^\.env\.(?!example$)', '(^|/)data/', '^agent-notes/', '^IMPLEMENTATION_REPORT\.md$', '\.log$',
     '(^|/)(postgres-data|pgdata)/', '\.(dump|backup)$', '^iso booklets/', '(^|/)node_modules/', '(^|/)\.venv/',
     '(^|/)__pycache__/', '(^|/)dist/', '\.(pem|key|pfx|p12)$')
 foreach ($f in $tracked) {

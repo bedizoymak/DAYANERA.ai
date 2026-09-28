@@ -26,7 +26,7 @@ export default function AccountMenu() {
   const owner = user.role === 'owner_admin';
   const links: Array<[string, string, boolean]> = [
     ['/belgeler', 'Belge arşivi', true],
-    ['/inceleme', 'İnceleme kuyruğu (Taslak çıkarım)', true],
+    ['/inceleme', 'İnceleme kuyruğu', true],
     ['/hesap', 'Dişli hesapları', true],
     ['/hafiza', 'Hafıza', true],
     ['/oneriler', 'Öneri notları', true],

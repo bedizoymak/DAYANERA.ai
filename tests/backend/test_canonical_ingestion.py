@@ -250,7 +250,10 @@ def test_ingested_but_unapproved_documents_are_not_evidence(admin, canonical_doc
     r = admin.post("/retrieval/search", {"query": f"{CODE_RACK.split(':')[0]} basınç açısı αP"}).json()
     assert r["passages"] == []
     inv = admin.get("/corpus/status").json()["items"]
-    assert any(i["standard_code"] == CODE_RACK and i["corpus_status"] != "verified" for i in inv)
+    rack_status = next(i for i in inv if i["standard_code"] == CODE_RACK)
+    assert rack_status["corpus_status"] != "verified"
+    assert rack_status["is_active"] is True and rack_status["version_state"] == "active"
+    assert rack_status["quality_report"]["gates"]
 
 
 def test_every_chunk_carries_full_lineage(admin, canonical_docs):

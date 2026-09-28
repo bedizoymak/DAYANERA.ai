@@ -312,3 +312,35 @@ export interface CorpusStatus {
   failed?: Array<{ title: string; error: string | null }>;
   jobs?: Record<string, number>;
 }
+
+export interface CorpusGate {
+  id: string;
+  status: string;
+  detail?: string | null;
+  pages?: number[];
+  value?: unknown;
+  threshold?: unknown;
+}
+
+export interface CorpusReviewItem {
+  document_id: string;
+  standard_code: string | null;
+  title: string;
+  document_status: string;
+  area: string | null;
+  is_verified_corpus: boolean;
+  version_id: string;
+  version_number: number;
+  ingestion_status: string;
+  corpus_status: string;
+  parser: string | null;
+  page_count: number | null;
+  sha256: string;
+  verified_at: string | null;
+  verified_by?: string | null;
+  review_note: string | null;
+  outcome: string | null;
+  chunks: number;
+  attention: CorpusGate[];
+  quality_report?: { gates?: CorpusGate[]; outcome?: string; [key: string]: unknown };
+}

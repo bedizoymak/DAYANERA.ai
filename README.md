@@ -141,6 +141,13 @@ go to the **review queue** ("İnceleme kuyruğu"). An authorized user must confi
 used in calculations, in memory or as evidence. The confirmation, the actor, the time, the original value and the
 source version are all audited.
 
+**Engineering corpus owner review.** An `owner_admin` can open the **ISO korpusu** tab in
+**İnceleme kuyruğu** to inspect each active ISO version's quality gates, parser, page/chunk counts,
+source hash and review note. Approval, rejection and revocation are individual, audited actions;
+`needs_review` items require a written note. There is no bulk approval, and approval is bound to the
+extraction fingerprint, so re-extraction or any content change returns the version to review before
+it can be used for strict evidence retrieval.
+
 **Engineering chunking.** PDFs are split along their engineering structure (clause → equation with its lead-in and
 "where" legend, table with repeated header, figure, note), not by a character window. Equations are rebuilt from
 the page geometry into normalised text and LaTeX (never by a model; uncertain ones are flagged for review), chunks

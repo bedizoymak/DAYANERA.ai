@@ -1,8 +1,76 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '../api/client';
-import type { DraftPage, ExtractedValue } from '../api/types';
+import type { CorpusReviewItem, DraftPage, ExtractedValue } from '../api/types';
+import { useAuth } from '../auth/AuthContext';
 
-type Tab = 'values' | 'pages';
+type Tab = 'values' | 'pages' | 'corpus';
+type CorpusAction = 'approve' | 'revoke' | 'reject';
+
+const corpusStatusTr: Record<string, string> = {
+  candidate: 'aday', extracted: 'onay bekliyor', needs_review: 'inceleme gerekli', verified: 'doğrulandı', failed: 'reddedildi',
+};
+
+function CorpusRow({
+  item, note, busy, onNote, onAction,
+}: {
+  item: CorpusReviewItem;
+  note: string;
+  busy: boolean;
+  onNote: (value: string) => void;
+  onAction: (action: CorpusAction) => void;
+}) {
+  const needsNote = item.corpus_status === 'needs_review';
+  const gates = item.quality_report?.gates ?? item.attention ?? [];
+  const canApprove = ['extracted', 'needs_review'].includes(item.corpus_status);
+  const canReject = ['candidate', 'extracted', 'needs_review'].includes(item.corpus_status);
+  const canRevoke = item.corpus_status === 'verified';
+
+  return (
+    <article className="card" data-testid={`corpus-review-${item.document_id}`}>
+      <header className="page-head">
+        <div>
+          <h2>{item.standard_code ?? item.title}</h2>
+          <p className="muted small">{item.title} · sürüm {item.version_number} · {item.parser ?? 'ayrıştırıcı bilinmiyor'}</p>
+        </div>
+        <span className={`chip ${item.corpus_status === 'verified' ? 'chip-ok' : item.corpus_status === 'failed' ? 'chip-bad' : 'chip-warn'}`}>
+          {corpusStatusTr[item.corpus_status] ?? item.corpus_status}
+        </span>
+      </header>
+      <dl className="meta">
+        <dt>İndeksleme</dt><dd>{item.ingestion_status} · {item.chunks} parça · {item.page_count ?? '—'} sayfa</dd>
+        <dt>Kalite kapıları</dt>
+        <dd>
+          {gates.length === 0 ? <span className="chip chip-ok">tamamı geçti</span> : (
+            <ul className="small">
+              {gates.map((gate) => (
+                <li key={gate.id}>{gate.id}: {gate.status}{gate.detail ? ` — ${gate.detail}` : ''}
+                  {gate.pages?.length ? ` (s. ${gate.pages.slice(0, 12).join(', ')})` : ''}</li>
+              ))}
+            </ul>
+          )}
+        </dd>
+        <dt>Kaynak özeti</dt><dd className="mono small">SHA-256: {item.sha256}</dd>
+        {item.review_note && <><dt>Son not</dt><dd>{item.review_note}</dd></>}
+      </dl>
+      {item.corpus_status !== 'verified' && (
+        <p className="muted small">Onay yalnızca bu etkin, indekslenmiş sürümü doğrulanmış ISO kanıtı yapar; taslak veya incelenmemiş parçalar otomatik olarak kanıt sayılmaz.</p>
+      )}
+      <label>
+        İnceleme notu{needsNote || canReject || canRevoke ? ' (zorunlu)' : ' (isteğe bağlı)'}
+        <textarea value={note} onChange={(e) => onNote(e.target.value)} rows={3} maxLength={2000}
+          placeholder="Kontrol edilen kapılar, sayfalar ve karar gerekçesi" disabled={busy} />
+      </label>
+      <div className="actions">
+        {canApprove && <button type="button" className="btn btn-primary" disabled={busy || (needsNote && !note.trim())}
+          onClick={() => onAction('approve')}>Onayla</button>}
+        {canReject && <button type="button" className="btn btn-danger" disabled={busy || !note.trim()}
+          onClick={() => onAction('reject')}>Reddet</button>}
+        {canRevoke && <button type="button" className="btn btn-danger" disabled={busy || !note.trim()}
+          onClick={() => onAction('revoke')}>Onayı geri al</button>}
+      </div>
+    </article>
+  );
+}
 
 function ValueRow({ v, onDone }: { v: ExtractedValue; onDone: (msg: string) => void }) {
   const [value, setValue] = useState(v.value !== null ? String(v.value) : '');
@@ -60,9 +128,14 @@ function ValueRow({ v, onDone }: { v: ExtractedValue; onDone: (msg: string) => v
 }
 
 export default function ReviewPage() {
+  const { user } = useAuth();
+  const owner = user?.role === 'owner_admin';
   const [tab, setTab] = useState<Tab>('values');
   const [values, setValues] = useState<ExtractedValue[]>([]);
   const [pages, setPages] = useState<DraftPage[]>([]);
+  const [corpus, setCorpus] = useState<CorpusReviewItem[]>([]);
+  const [corpusNotes, setCorpusNotes] = useState<Record<string, string>>({});
+  const [corpusBusy, setCorpusBusy] = useState<string | null>(null);
   const [pageTotal, setPageTotal] = useState(0);
   const [selected, setSelected] = useState<DraftPage | null>(null);
   const [text, setText] = useState('');
@@ -81,9 +154,24 @@ export default function ReviewPage() {
     }
   }, []);
 
+  const loadCorpus = useCallback(async () => {
+    if (!owner) return;
+    try {
+      const result = await api.get<{ items: CorpusReviewItem[] }>('/corpus/status');
+      setCorpus(result.items.filter((item) => item.is_verified_corpus));
+      setErr(null);
+    } catch (e) {
+      setErr((e as Error).message);
+    }
+  }, [owner]);
+
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    if (tab === 'corpus') void loadCorpus();
+  }, [tab, loadCorpus]);
 
   async function openPage(p: DraftPage) {
     const full = await api.get<DraftPage>(`/extractions/pages/${p.id}`);
@@ -105,9 +193,29 @@ export default function ReviewPage() {
     }
   }
 
+  async function decideCorpus(item: CorpusReviewItem, action: CorpusAction) {
+    const note = (corpusNotes[item.document_id] ?? '').trim();
+    if ((item.corpus_status === 'needs_review' || action !== 'approve') && !note) {
+      setErr('Bu karar için inceleme notu zorunludur.');
+      return;
+    }
+    setCorpusBusy(item.document_id);
+    setErr(null);
+    try {
+      await api.post(`/documents/${item.document_id}/corpus/${action}`, { note: note || null });
+      setMsg(action === 'approve' ? 'Sürüm owner onayıyla doğrulanmış korpusa alındı.'
+        : action === 'revoke' ? 'Korpus onayı geri alındı; yeniden inceleme gerekiyor.' : 'Sürüm korpusa alınmadı ve reddedildi.');
+      await loadCorpus();
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally {
+      setCorpusBusy(null);
+    }
+  }
+
   return (
     <div className="page">
-      <header className="page-head"><h1>İnceleme kuyruğu — Taslak çıkarım</h1></header>
+      <header className="page-head"><h1>İnceleme kuyruğu</h1></header>
       <p className="muted small">
         OCR, görsel çıkarım ve ses dökümünden gelen değerler <strong>Taslak çıkarım</strong>dır. Yetkili kullanıcı onaylamadan
         hesaplara, doğrulanmış hafızaya veya etkin teknik bilgilere giremez. Onay; işlem yapan kişi, zaman, özgün değer ve
@@ -120,6 +228,11 @@ export default function ReviewPage() {
         <button type="button" role="tab" aria-selected={tab === 'pages'} className={tab === 'pages' ? 'tab active' : 'tab'} onClick={() => setTab('pages')}>
           OCR/döküm sayfaları ({pageTotal})
         </button>
+        {owner && (
+          <button type="button" role="tab" aria-selected={tab === 'corpus'} className={tab === 'corpus' ? 'tab active' : 'tab'} onClick={() => setTab('corpus')}>
+            ISO korpusu ({corpus.filter((item) => item.corpus_status !== 'verified').length} bekliyor)
+          </button>
+        )}
       </div>
       {msg && <p className="ok" role="status">{msg}</p>}
       {err && <p className="error" role="alert">{err}</p>}
@@ -162,6 +275,24 @@ export default function ReviewPage() {
             </section>
           )}
         </div>
+      )}
+      {tab === 'corpus' && owner && (
+        <section aria-label="ISO korpusu owner incelemesi">
+          <p className="muted small">
+            Her etkin ISO sürümü ayrı değerlendirilir. Kalite kapıları, kaynak özeti ve çıkarım durumu incelenmeden onay vermeyin;
+            toplu onay yoktur. Onay yalnızca sürümün mevcut fingerprint&apos;ine bağlanır ve yeniden çıkarımda tekrar değerlendirme gerekir.
+          </p>
+          {corpus.length === 0 ? <p className="muted">İncelenecek ISO sürümü yok.</p> : (
+            <div className="split">
+              {corpus.map((item) => (
+                <CorpusRow key={item.document_id} item={item} note={corpusNotes[item.document_id] ?? ''}
+                  busy={corpusBusy === item.document_id}
+                  onNote={(value) => setCorpusNotes((current) => ({ ...current, [item.document_id]: value }))}
+                  onAction={(action) => void decideCorpus(item, action)} />
+              ))}
+            </div>
+          )}
+        </section>
       )}
     </div>
   );

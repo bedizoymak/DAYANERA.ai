@@ -127,7 +127,8 @@ def reject(db: Session, version_id: uuid.UUID, reviewer: Reviewer, note: str) ->
 _STATUS_SQL = """
 SELECT d.id AS document_id, d.standard_code, d.title, d.status AS document_status, ka.slug AS area,
        ka.is_verified_corpus, v.id AS version_id, v.version_number, v.ingestion_status, v.corpus_status,
-       v.parser, v.page_count, v.sha256, v.verified_at, v.review_note,
+       v.state AS version_state, v.is_active, v.parser, v.page_count, v.sha256,
+       v.verified_by, v.verified_at, v.review_note, v.quality_report,
        v.quality_report->>'outcome' AS outcome,
        (SELECT count(*) FROM document_chunks c WHERE c.version_id = v.id) AS chunks
 FROM documents d
